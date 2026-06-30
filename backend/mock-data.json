@@ -17,7 +17,8 @@
         "text": "1500 Corporate Drive, Suite 200, San Francisco, CA 94107",
         "type": "OTHER",
         "confidence": 0.85,
-        "status": "redacted"
+        "status": "redacted",
+        "source": "manual"
       },
       {
         "id": "r-3",
@@ -40,7 +41,7 @@
         "text": "Project Titan",
         "type": "OTHER",
         "confidence": 0.65,
-        "status": "redacted",
+        "status": "visible",
         "source": "manual"
       },
       {
@@ -83,7 +84,8 @@
         "text": "David O'Connor",
         "type": "PERSON",
         "confidence": 0.99,
-        "status": "redacted"
+        "status": "redacted",
+        "source": "manual"
       },
       {
         "id": "r-12",
@@ -97,7 +99,7 @@
         "text": "business transaction",
         "type": "OTHER",
         "confidence": 1,
-        "status": "redacted",
+        "status": "visible",
         "source": "manual"
       }
     ]
@@ -112,7 +114,8 @@
         "text": "Nexus Analytics Group",
         "type": "PERSON",
         "confidence": 0.38,
-        "status": "redacted"
+        "status": "visible",
+        "source": "manual"
       },
       {
         "id": "m1-2",

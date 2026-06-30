@@ -58,7 +58,7 @@ export default function App() {
 
   const [tab, setTab] = useState('Risks'); // Risks | Redactions | Removals
   const [leftCol, setLeftCol] = useState(false);
-  
+
   const [conf, setConf] = useState(null);
   const [sel, setSel] = useState(null);
   const [selT, setSelT] = useState(TYPES[0]);
@@ -102,9 +102,9 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { 
+  useEffect(() => {
     loadDocs();
-    loadDoc('api'); 
+    loadDoc('api');
   }, [loadDocs, loadDoc]);
 
   // toggle red
@@ -189,7 +189,7 @@ export default function App() {
   const handleRem = (r, el = null) => {
     if (r.confidence >= 0.75) {
       let rect = { left: window.innerWidth / 2 - 100, top: window.innerHeight / 2 };
-      if (el) { rect = el.getBoundingClientRect(); } 
+      if (el) { rect = el.getBoundingClientRect(); }
       else {
         const domEl = document.getElementById('span-' + r.id);
         if (domEl) rect = domEl.getBoundingClientRect();
@@ -219,9 +219,9 @@ export default function App() {
   const unredactedIssues = getUnredacted(doc, reds);
   const risksList = [];
   reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
-  
+
   const unredactedFakeReds = unredactedIssues.map((u, i) => ({
-    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true 
+    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true
   }));
   risksList.push(...unredactedFakeReds);
 
@@ -237,7 +237,7 @@ export default function App() {
   if (tab === 'Risks') curList = risksList;
   else if (tab === 'Redactions') curList = redactionsList;
   else if (tab === 'Removals') curList = removalsList;
-  
+
   curList.sort((a, b) => b.confidence - a.confidence);
 
   // build spans
@@ -262,7 +262,7 @@ export default function App() {
 
     for (const r of non) {
       if (cur < r.s) seg.push(<span key={`p-${cur}`}>{doc.slice(cur, r.s)}</span>);
-      
+
       let cls = 'span-base ';
       const og = origReds?.find(o => o.id === r.id);
       const isAd = !og;
@@ -279,8 +279,8 @@ export default function App() {
       }
 
       seg.push(
-        <span 
-          key={r.id} 
+        <span
+          key={r.id}
           id={`span-${r.id}`}
           className={cls}
           onClick={(e) => handleSpanClick(e, r)}
@@ -340,7 +340,7 @@ export default function App() {
   // fin exp -> actual file download
   const finExp = () => {
     setExpState(null);
-    
+
     // sort redactions by position to replace correctly
     const pos = reds.map((r) => {
       const i = doc.indexOf(r.text);
@@ -367,20 +367,72 @@ export default function App() {
     finalTxt += doc.slice(cur);
 
     if (exportFormat === 'pdf') {
-      const pdf = new jsPDF();
-      pdf.setFontSize(12);
-      const margin = 15;
-      const pageHeight = pdf.internal.pageSize.height;
-      const textLines = pdf.splitTextToSize(finalTxt, pdf.internal.pageSize.width - (margin * 2));
-      let y = margin;
-      for (let i = 0; i < textLines.length; i++) {
-        if (y > pageHeight - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(textLines[i], margin, y);
-        y += 7;
+      const pdf = new jsPDF('p', 'pt', 'letter');
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      
+      const margin = 50;
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const maxW = pageW - margin * 2;
+      
+      let x = margin;
+      let y = margin + 12;
+      const lineHeight = 16;
+      const rectOffsetY = -11;
+      const rectHeight = 15;
+
+      const tokens = [];
+      let curHtml = 0;
+      for (const r of non) {
+        const before = doc.slice(curHtml, r.s);
+        if (before) tokens.push({ text: before, redacted: false });
+        tokens.push({ text: r.text, redacted: r.status === 'redacted' });
+        curHtml = r.e;
       }
+      const after = doc.slice(curHtml);
+      if (after) tokens.push({ text: after, redacted: false });
+
+      const layoutTokens = [];
+      for (const t of tokens) {
+        const parts = t.text.split(/([ \t]+|\n)/);
+        for (const p of parts) {
+          if (p) layoutTokens.push({ text: p, redacted: t.redacted });
+        }
+      }
+
+      for (const lt of layoutTokens) {
+        if (lt.text === '\n') {
+          x = margin;
+          y += lineHeight;
+          if (y > pageH - margin) {
+            pdf.addPage();
+            y = margin + 12;
+          }
+          continue;
+        }
+
+        const w = pdf.getTextWidth(lt.text);
+        
+        if (x + w > margin + maxW && lt.text.trim() !== '') {
+          x = margin;
+          y += lineHeight;
+          if (y > pageH - margin) {
+            pdf.addPage();
+            y = margin + 12;
+          }
+        }
+        
+        if (lt.redacted) {
+          pdf.setFillColor(0, 0, 0);
+          pdf.rect(x, y + rectOffsetY, w, rectHeight, 'F');
+        } else {
+          pdf.text(lt.text, x, y);
+        }
+        
+        x += w;
+      }
+      
       pdf.save(`Conseal_${curDocId}_Redacted.pdf`);
     } else {
       const blob = new Blob([finalTxt], { type: 'text/plain' });
@@ -424,7 +476,7 @@ export default function App() {
             </button>
           </div>
           <div className="doc-list">
-            
+
             {docList.map(d => {
               const isOpen = openAccordionId === d.id;
               return (
@@ -547,8 +599,8 @@ export default function App() {
                 <div key={i} className="modal-item">
                   <div className="modal-item-text">{item.text} <span>({item.type})</span></div>
                   <div className="modal-item-actions">
-                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'redact'})}>✓</button>
-                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'keep'})}>✕</button>
+                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'redact' })}>✓</button>
+                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'keep' })}>✕</button>
                   </div>
                 </div>
               ))}
@@ -566,14 +618,14 @@ export default function App() {
           <div className="modal">
             <h2>Quick Review</h2>
             <p>Is this text sensitive?</p>
-            <div style={{padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px'}}>
+            <div style={{ padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px' }}>
               <strong>{quiz?.text}</strong>
             </div>
-            <div style={{display: 'flex', gap: '20px', marginBottom: '32px'}}>
-              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
                 <input type="radio" checked={quizAns === 'yes'} onChange={() => setQuizAns('yes')} /> Yes
               </label>
-              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
                 <input type="radio" checked={quizAns === 'no'} onChange={() => setQuizAns('no')} /> No
               </label>
             </div>
