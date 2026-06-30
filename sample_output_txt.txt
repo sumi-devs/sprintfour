@@ -1,0 +1,23 @@
+MUTUAL NON-DISCLOSURE AGREEMENT
+
+This Mutual Non-Disclosure Agreement (this "Agreement") is entered into as of October 12, 2024, by and between ██████████████████████████, a Delaware corporation, located at ████████████████████████████████████████████████████████, and ███████████████████████, located at ███████████████████████████████████████.
+
+WHEREAS, the parties intend to engage in discussions regarding a potential ████████████████████ or partnership (the "Purpose"). In connection with the Purpose, each party may disclose to the other party certain confidential and proprietary information.
+
+NOW, THEREFORE, in consideration of the mutual covenants contained herein, the parties agree as follows:
+
+1. Confidential Information. "Confidential Information" means all non-public information disclosed by one party (the "Disclosing Party") to the other party (the "Receiving Party"), including but not limited to financial projections, customer lists, and proprietary algorithms. For instance, the specifics of █████████████ and the associated budget of █████████████ shall be deemed highly confidential.
+
+2. Representatives. The Receiving Party may disclose Confidential Information only to its employees and advisors who need to know such information for the Purpose. ███████████████████████ designates █████████████ (████████████████████████████) and ███████████ (Phone: ██████████████) as the primary points of contact for this exchange.
+
+3. Term. This Agreement shall remain in effect for a period of three (3) years from the Effective Date. The Receiving Party's duty to protect Confidential Information shall expire five (5) years from the date of disclosure.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date.
+
+██████████████████████████
+By: ██████████████
+Title: Chief Strategy Officer
+
+███████████████████████
+By: █████████████
+Title: VP of Partnerships
