@@ -348,7 +348,7 @@ export default function App() {
       } else {
         const og = origReds?.find(o => o.id === r.id);
         const isRemoval = og && og.status === 'redacted';
-        cls += isRemoval ? 'span-removed' : 'span-risk';
+        cls += isRemoval ? 'span-removed' : (r.isRegexMiss ? 'span-regex-miss' : 'span-risk');
       }
 
       seg.push(
@@ -622,11 +622,11 @@ export default function App() {
             {curList.map(r => (
               <div key={r.id} className="redaction-card">
                 <div className="card-header">
-                  <span className="card-type">{r.type}</span>
-                  <span className={`card-risk ${r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low'}`}>
-                    {r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk'}
-                  </span>
-                </div>
+                <span className="card-type">{r.type}</span>
+                <span className={`card-risk ${r.isRegexMiss ? 'risk-regex' : (r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low')}`}>
+                  {r.isRegexMiss ? 'REGEX MISS' : (r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk')}
+                </span>
+              </div>
                 <div className="card-text">{r.text}</div>
                 <div className="card-actions">
                   {r.status === 'visible' ? (
@@ -648,6 +648,7 @@ export default function App() {
           <div className="legend-item"><div className="legend-box lb-med"></div> Medium Confidence (50-75%)</div>
           <div className="legend-item"><div className="legend-box lb-low"></div> Low Confidence (&lt;50%)</div>
           <div className="legend-item"><div className="legend-box lb-removed"></div> Removal (Red Border)</div>
+          <div className="legend-item"><div className="legend-box lb-regex-miss"></div> Regex Miss (Pulsing Red)</div>
           <div className="legend-item"><div className="legend-box lb-risk"></div> Unredacted Risk (Grey Border)</div>
         </div>
       </div>

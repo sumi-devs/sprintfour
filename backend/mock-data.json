@@ -428,11 +428,12 @@
             "status": "redacted"
           },
           {
-            "id": "m2-9",
+            "id": "regex-miss-1782810956661-1173",
             "text": "(702) 555-3314",
             "type": "PHONE",
-            "confidence": 0.98,
-            "status": "redacted"
+            "confidence": 1,
+            "status": "visible",
+            "isRegexMiss": true
           }
         ]
       },
@@ -466,7 +467,8 @@
             "text": "August 14, 2023",
             "type": "DATE",
             "confidence": 0.7,
-            "status": "redacted"
+            "status": "redacted",
+            "source": "manual"
           },
           {
             "id": "m2-5",
@@ -497,11 +499,13 @@
             "status": "redacted"
           },
           {
-            "id": "m2-9",
+            "id": "regex-miss-current-1782811001379-9523",
             "text": "(702) 555-3314",
             "type": "PHONE",
-            "confidence": 0.98,
-            "status": "redacted"
+            "confidence": 1,
+            "status": "redacted",
+            "isRegexMiss": true,
+            "source": "manual"
           }
         ]
       }

@@ -17,6 +17,50 @@ function saveData(data) {
     fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
 }
 
+const REGEX_RULES = [
+    { type: "PHONE", regex: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b|\(\d{3}\)\s*\d{3}[-.]?\d{4}\b/g },
+    { type: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+    { type: "SSN", regex: /\b\d{3}-\d{2}-\d{4}\b/g }
+];
+
+function applyRegexFallback(doc) {
+    if (!doc.documentText || !doc.versions) return false;
+    let modified = false;
+
+    REGEX_RULES.forEach(rule => {
+        let match;
+        const re = new RegExp(rule.regex);
+        while ((match = re.exec(doc.documentText)) !== null) {
+            const matchedText = match[0];
+            
+            // Apply to all versions if missing
+            doc.versions.forEach(version => {
+                const exists = version.redactions.some(r => r.text === matchedText);
+                if (!exists) {
+                    version.redactions.push({
+                        id: `regex-miss-${version.id}-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                        text: matchedText,
+                        type: rule.type,
+                        confidence: 1.0,
+                        status: "visible", 
+                        isRegexMiss: true
+                    });
+                    modified = true;
+                }
+            });
+        }
+    });
+    return modified;
+}
+
+// Run fallback on startup
+const initialData = loadData();
+let anyModified = false;
+Object.values(initialData).forEach(doc => {
+    if (applyRegexFallback(doc)) anyModified = true;
+});
+if (anyModified) saveData(initialData);
+
 // GET all available docs
 app.get("/api/documents", (req, res) => {
     const data = loadData();
