@@ -149,7 +149,7 @@
             "text": "Project Titan",
             "type": "OTHER",
             "confidence": 0.65,
-            "status": "visible",
+            "status": "redacted",
             "source": "manual"
           },
           {
@@ -164,7 +164,7 @@
             "text": "Sarah Jenkins",
             "type": "PERSON",
             "confidence": 0.99,
-            "status": "redacted",
+            "status": "visible",
             "source": "manual"
           },
           {
@@ -193,7 +193,7 @@
             "text": "David O'Connor",
             "type": "PERSON",
             "confidence": 0.99,
-            "status": "redacted",
+            "status": "visible",
             "source": "manual"
           },
           {
@@ -216,7 +216,7 @@
             "text": "Apex Global Solutions Inc.",
             "type": "PERSON",
             "confidence": 1,
-            "status": "redacted",
+            "status": "visible",
             "isRegexMiss": false,
             "source": "manual"
           },
@@ -234,7 +234,7 @@
             "text": "Vertex Technologies LLC",
             "type": "PERSON",
             "confidence": 1,
-            "status": "redacted",
+            "status": "visible",
             "isRegexMiss": false,
             "source": "manual"
           }

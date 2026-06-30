@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import jsPDF from 'jspdf';
 
-const API = 'http://localhost:3001';
+const API = 'https://sprintfour.onrender.com/';
 const TYPES = ['PERSON', 'PHONE', 'EMAIL', 'DATE', 'MONEY', 'ID_NUMBER', 'OTHER'];
 
 const guessType = (txt) => {
