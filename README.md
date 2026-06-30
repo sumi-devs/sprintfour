@@ -8,7 +8,7 @@ Problem 3: Sam is moving fast and trusts the tool a little too much, so mistakes
 
 - **Colour-coded redactions**: High positive score (>75) is hard black, medium (50-75) is dark blue, and low (<50) is yellow. User added redactions are black. Removals get a translucent red border.
 - **On hover**, solid black redactions turn translucent so you can see what is underneath.
-- **Hovering** also shows quick "redact" and "remove" buttons.
+- **Clicking** a redacted text removes the redaction and selecting text allows you to redact it and categorize as well.
 - **Sidebar** on the right containing lists of risks, all redactions and all removals as an easy to review collection. It orders everything from highest risk to lowest.
 - **Inconsistency checking**: If you redact "John" somewhere but miss it somewhere else, it gets highlighted to maintain consistency.
 - **Proximity scanning**: If you manually redact a word, it highlights the word before and after and asks whether to redact those too.
