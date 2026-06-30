@@ -1,0 +1,100 @@
+{
+  "documentId": "doc-001",
+  "documentText": "Subject: Re: Account Access Issue - Ticket #48291\n\nHi support team,\n\nMy name is Daniel Reyes and I'm having trouble logging into my account. I tried resetting my password but never received the reset email. Could you check if there's an issue tied to daniel.reyes88@gmail.com?\n\nFor reference, my account was created in March 2019, and I've been a customer for about five years now. My customer ID is CX-20394857.\n\nIf it's easier, you can reach me directly at (512) 555-0199 - I'm usually free in the afternoons. Alternatively, my assistant Maria Chen can help at maria.chen@outlook.com or (415) 555-0342.\n\nI also noticed a charge of $245.00 from \"Bright Horizon Consulting\" on my last statement dated June 15, 2024 that I don't recognize. Could someone look into that?\n\nMy colleague Sarah Mitchell also experienced a similar issue last week and was told to contact support@brighthorizon.com for billing disputes.\n\nI've CC'd my attorney James Patterson on this thread as well.\n\nThanks,\nDaniel",
+  "redactions": [
+    {
+      "id": "r1",
+      "text": "Daniel Reyes",
+      "type": "PERSON",
+      "confidence": 0.97,
+      "status": "redacted"
+    },
+    {
+      "id": "r2",
+      "text": "daniel.reyes88@gmail.com",
+      "type": "EMAIL",
+      "confidence": 0.95,
+      "status": "redacted"
+    },
+    {
+      "id": "r3",
+      "text": "March 2019",
+      "type": "DATE",
+      "confidence": 0.58,
+      "status": "redacted"
+    },
+    {
+      "id": "r4",
+      "text": "five years",
+      "type": "DATE",
+      "confidence": 0.49,
+      "status": "redacted",
+      "source": "manual"
+    },
+    {
+      "id": "r5",
+      "text": "$245.00",
+      "type": "MONEY",
+      "confidence": 0.55,
+      "status": "redacted"
+    },
+    {
+      "id": "r6",
+      "text": "Ticket #48291",
+      "type": "ID_NUMBER",
+      "confidence": 0.68,
+      "status": "redacted"
+    },
+    {
+      "id": "r7",
+      "text": "CX-20394857",
+      "type": "ID_NUMBER",
+      "confidence": 0.82,
+      "status": "redacted"
+    },
+    {
+      "id": "r8",
+      "text": "(512) 555-0199",
+      "type": "PHONE",
+      "confidence": 0.93,
+      "status": "redacted"
+    },
+    {
+      "id": "r9",
+      "text": "Maria Chen",
+      "type": "PERSON",
+      "confidence": 0.91,
+      "status": "redacted"
+    },
+    {
+      "id": "r10",
+      "text": "June 15, 2024",
+      "type": "DATE",
+      "confidence": 0.72,
+      "status": "redacted"
+    },
+    {
+      "id": "r11",
+      "text": "James Patterson",
+      "type": "PERSON",
+      "confidence": 0.88,
+      "status": "redacted"
+    },
+    {
+      "id": "manual-1782803115929",
+      "text": "Sarah",
+      "type": "PERSON",
+      "confidence": 1,
+      "status": "redacted",
+      "source": "manual"
+    },
+    {
+      "id": "manual-1782803130463",
+      "text": "Mitchell",
+      "type": "PERSON",
+      "confidence": 1,
+      "status": "redacted",
+      "source": "manual"
+    }
+  ]
+}
