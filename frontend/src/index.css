@@ -1,0 +1,134 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: monospace;
+  font-size: 14px;
+  padding: 20px;
+  background: #fafafa;
+  color: #111;
+}
+
+h1 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+h2 {
+  font-size: 15px;
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+
+.document-viewer {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 16px;
+  max-width: 720px;
+  position: relative;
+}
+
+.redacted-span {
+  background: #fdd;
+  border: 1px solid #c44;
+  border-radius: 2px;
+  padding: 0 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.visible-span {
+  background: transparent;
+  border: 1px dashed #aaa;
+  border-radius: 2px;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.redacted-span:hover,
+.visible-span:hover {
+  outline: 2px solid #39f;
+}
+
+.span-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #333;
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.redacted-span:hover .span-tooltip,
+.visible-span:hover .span-tooltip {
+  display: block;
+}
+
+
+.selection-popup {
+  position: fixed;
+  background: #fff;
+  border: 2px solid #333;
+  padding: 8px 12px;
+  z-index: 100;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.selection-popup select {
+  padding: 3px 4px;
+  font-size: 13px;
+}
+
+.selection-popup button {
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+
+.redactions-table {
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 13px;
+  max-width: 720px;
+  width: 100%;
+}
+
+.redactions-table th,
+.redactions-table td {
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.redactions-table th {
+  background: #eee;
+}
+
+.redactions-table button {
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+
+.error {
+  color: #c00;
+  font-weight: bold;
+}
