@@ -93,6 +93,7 @@ export default function App() {
 
   const [expState, setExpState] = useState(null);
   const [exportFormat, setExportFormat] = useState('txt');
+  const exportFormatRef = useRef('txt');
 
   const [exportCollisions, setExportCollisions] = useState([]);
   const [exportHighRisks, setExportHighRisks] = useState([]);
@@ -398,6 +399,7 @@ export default function App() {
 
   const doExp = async (format) => {
     setExportFormat(format);
+    exportFormatRef.current = format;
 
     try {
       const res = await fetch(`${API}/api/document/${curDocId}/versions/${activeVersionId}/validate`);
@@ -462,7 +464,7 @@ export default function App() {
     }
     finalTxt += doc.slice(cur);
 
-    if (exportFormat === 'pdf') {
+    if (exportFormatRef.current === 'pdf') {
       const pdf = new jsPDF('p', 'pt', 'letter');
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(11);
