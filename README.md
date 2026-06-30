@@ -6,6 +6,8 @@ Problem 3: Sam is moving fast and trusts the tool a little too much, so mistakes
 
 https://github.com/user-attachments/assets/78387ae4-69f3-4a1f-8d41-f15bd64387fc
 
+Live Website: https://conseal-pii-correction.onrender.com/
+
 ## Features
 
 - **Colour-coded redactions**: High positive score (>75) is hard black, medium (50-75) is dark blue, and low (<50) is yellow. User added redactions are black. Removals get a translucent red border.
