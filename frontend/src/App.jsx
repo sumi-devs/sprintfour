@@ -49,7 +49,7 @@ export default function App() {
   const [reds, setReds] = useState([]);
   const [origReds, setOrigReds] = useState(null);
 
-  const [tab, setTab] = useState('All');
+  const [tab, setTab] = useState('Redactions'); // Redactions | Risks | Removals
   const [hov, setHov] = useState(null);
   const [conf, setConf] = useState(null);
   const [sel, setSel] = useState(null);
@@ -265,7 +265,28 @@ export default function App() {
     alert('exported');
   };
 
-  const sorted = [...reds].sort((a, b) => b.confidence - a.confidence);
+  // prep sidebar lists
+  const unredactedIssues = getUnredacted(doc, reds);
+  const risksList = [];
+  reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
+  unredactedIssues.forEach((u, i) => {
+    risksList.push({ id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true });
+  });
+
+  const removalsList = reds.filter(r => {
+    const og = origReds?.find(o => o.id === r.id);
+    return og && og.status === 'redacted' && r.status === 'visible';
+  });
+
+  const redactionsList = reds.filter(r => r.status === 'redacted');
+
+  // get list for current tab
+  let curList = [];
+  if (tab === 'Redactions') curList = redactionsList;
+  else if (tab === 'Risks') curList = risksList;
+  else if (tab === 'Removals') curList = removalsList;
+  
+  curList.sort((a, b) => b.confidence - a.confidence);
 
   return (
     <div className="layout" onClick={clearSel}>
@@ -281,19 +302,24 @@ export default function App() {
 
       <div className="sidebar">
         <div className="sidebar-header">
-          <div className="sidebar-title">Review Redactions</div>
+          <div className="sidebar-title">Review</div>
           <div className="sidebar-tabs">
-            <div className={`tab ${tab === 'All' ? 'active' : ''}`} onClick={() => setTab('All')}>All risks</div>
-            <div className={`tab ${tab === 'High' ? 'active' : ''}`} onClick={() => setTab('High')}>High</div>
-            <div className={`tab ${tab === 'Med' ? 'active' : ''}`} onClick={() => setTab('Med')}>Med</div>
+            <div className={`tab ${tab === 'Redactions' ? 'active' : ''}`} onClick={() => setTab('Redactions')}>
+              Redactions ({redactionsList.length})
+            </div>
+            <div className={`tab ${tab === 'Risks' ? 'active' : ''}`} onClick={() => setTab('Risks')}>
+              Risks ({risksList.length})
+            </div>
+            <div className={`tab ${tab === 'Removals' ? 'active' : ''}`} onClick={() => setTab('Removals')}>
+              Removals ({removalsList.length})
+            </div>
           </div>
         </div>
         <div className="sidebar-content">
-          {sorted.filter(r => {
-            if (tab === 'High') return r.confidence >= 0.75;
-            if (tab === 'Med') return r.confidence >= 0.5 && r.confidence < 0.75;
-            return true;
-          }).map(r => (
+          {curList.length === 0 && (
+            <div style={{ color: '#6d7383', fontSize: 14, textAlign: 'center', marginTop: 20 }}>No items here.</div>
+          )}
+          {curList.map(r => (
             <div key={r.id} className="redaction-card">
               <div className="card-header">
                 <span className="card-type">{r.type}</span>
@@ -304,7 +330,7 @@ export default function App() {
               <div className="card-text">{r.text}</div>
               <div className="card-actions">
                 {r.status === 'visible' ? (
-                  <button className="card-btn primary" onClick={() => tog(r.id, 'visible')}>Redact</button>
+                  <button className="card-btn primary" onClick={() => r.isNew ? add(r.text, r.type) : tog(r.id, 'visible')}>Redact</button>
                 ) : (
                   <button className="card-btn" onClick={() => handleRem(r)}>Remove</button>
                 )}
@@ -360,7 +386,7 @@ export default function App() {
             <div className="modal-list">
               {expItems.map((item, i) => (
                 <div key={i} className="modal-item">
-                  <div className="modal-item-text">{item.text} <span style={{color: '#888', fontSize: 12}}>({item.type})</span></div>
+                  <div className="modal-item-text">{item.text} <span>({item.type})</span></div>
                   <div className="modal-item-actions">
                     <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'redact'})}>✓</button>
                     <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'keep'})}>✕</button>
@@ -381,14 +407,14 @@ export default function App() {
           <div className="modal">
             <h2>Quick Review</h2>
             <p>Is this text sensitive?</p>
-            <div style={{padding: '12px', background: '#f5f5f5', borderRadius: 4, marginBottom: 16}}>
+            <div style={{padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px'}}>
               <strong>{quiz?.text}</strong>
             </div>
-            <div style={{display: 'flex', gap: 12, marginBottom: 24}}>
-              <label style={{display: 'flex', gap: 8, cursor: 'pointer'}}>
+            <div style={{display: 'flex', gap: '20px', marginBottom: '32px'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
                 <input type="radio" checked={quizAns === 'yes'} onChange={() => setQuizAns('yes')} /> Yes
               </label>
-              <label style={{display: 'flex', gap: 8, cursor: 'pointer'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
                 <input type="radio" checked={quizAns === 'no'} onChange={() => setQuizAns('no')} /> No
               </label>
             </div>

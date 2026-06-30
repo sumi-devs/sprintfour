@@ -28,7 +28,7 @@
       "text": "five years",
       "type": "DATE",
       "confidence": 0.49,
-      "status": "redacted",
+      "status": "visible",
       "source": "manual"
     },
     {
@@ -36,7 +36,8 @@
       "text": "$245.00",
       "type": "MONEY",
       "confidence": 0.55,
-      "status": "redacted"
+      "status": "visible",
+      "source": "manual"
     },
     {
       "id": "r6",
@@ -64,7 +65,8 @@
       "text": "Maria Chen",
       "type": "PERSON",
       "confidence": 0.91,
-      "status": "redacted"
+      "status": "visible",
+      "source": "manual"
     },
     {
       "id": "r10",

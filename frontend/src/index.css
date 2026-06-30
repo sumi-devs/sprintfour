@@ -1,14 +1,37 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; background: #f8f9fc; color: #1e2029; }
-.layout { display: flex; height: 100vh; overflow: hidden; }
-.main-area { flex: 1; padding: 48px 60px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
-.header { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-.logo { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: #0a0b0d; }
-.export-btn { background: #0a0b0d; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-.export-btn:hover { background: #2d3039; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; background: #fff; color: #1e2029; }
 
-.document-container { background: #fff; width: 100%; max-width: 800px; padding: 64px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.02); line-height: 2; font-size: 16px; white-space: pre-wrap; color: #2d3039; }
+.app-container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
+/* ── Top Header ── */
+.top-header { height: 64px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid #e2e4e9; background: #fff; z-index: 10; }
+.logo-area { display: flex; align-items: center; gap: 8px; width: 250px; }
+.logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: #0a0b0d; }
+.header-title { flex: 1; text-align: center; font-size: 15px; color: #6d7383; font-weight: 500; letter-spacing: 0.3px; }
+.header-right { width: 380px; }
+
+/* ── Main Workspace ── */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Left Sidebar ── */
+.left-sidebar { width: 260px; background: #fafafa; border-right: 1px solid #e2e4e9; transition: width 0.2s ease; display: flex; flex-direction: column; overflow: hidden; }
+.left-sidebar.collapsed { width: 60px; }
+.left-sidebar-header { padding: 16px; display: flex; justify-content: flex-end; border-bottom: 1px solid transparent; }
+.left-sidebar:not(.collapsed) .left-sidebar-header { border-bottom-color: #e2e4e9; }
+.collapse-btn { background: #fff; border: 1px solid #e2e4e9; border-radius: 4px; padding: 6px; cursor: pointer; color: #6d7383; display: flex; justify-content: center; align-items: center; }
+.collapse-btn:hover { background: #f0f1f4; }
+.doc-list { padding: 20px 16px; display: flex; flex-direction: column; gap: 24px; opacity: 1; transition: opacity 0.2s; white-space: nowrap; }
+.collapsed .doc-list { opacity: 0; pointer-events: none; }
+.doc-item { display: flex; flex-direction: column; gap: 10px; }
+.doc-title { font-size: 14px; font-weight: 600; color: #0a0b0d; }
+.doc-versions { padding: 10px; border: 1px solid #e2e4e9; border-radius: 6px; background: #fff; font-size: 13px; color: #2d3039; outline: none; cursor: pointer; }
+.doc-versions:focus { border-color: #0a0b0d; }
+
+/* ── Center Document ── */
+.document-pane { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 64px 40px; background: #fff; }
+.document-content { width: 100%; max-width: 740px; line-height: 2; font-size: 16px; white-space: pre-wrap; color: #2d3039; padding-bottom: 120px; }
+
+/* ── Redaction Spans ── */
 .span-base { border-radius: 4px; padding: 2px 6px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; position: relative; cursor: pointer; line-height: 1.5; margin: 0 1px; }
 .redact-high { background: #0a0b0d; color: #0a0b0d; }
 .redact-high:hover { background: rgba(10, 11, 13, 0.5); color: #0a0b0d; }
@@ -20,16 +43,21 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .redact-user:hover { background: rgba(10, 11, 13, 0.5); }
 .span-removed { background: transparent; border: 1px solid rgba(148, 153, 168, 0.6); }
 
-.sidebar { width: 380px; background: #fff; border-left: 1px solid #e2e4e9; display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.02); }
-.sidebar-header { padding: 24px; border-bottom: 1px solid #e2e4e9; }
-.sidebar-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #0a0b0d; }
-.sidebar-tabs { display: flex; gap: 24px; padding: 0 4px; }
+/* ── Right Sidebar ── */
+.sidebar { width: 380px; background: #fff; border-left: 1px solid #e2e4e9; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-header { padding: 24px; border-bottom: 1px solid #e2e4e9; display: flex; flex-direction: column; gap: 20px; }
+.sidebar-top-row { display: flex; justify-content: space-between; align-items: center; }
+.sidebar-title { font-size: 18px; font-weight: 600; color: #0a0b0d; }
+.export-btn { background: #0a0b0d; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+.export-btn:hover { background: #2d3039; }
+.sidebar-tabs { display: flex; gap: 20px; }
 .tab { padding: 8px 0; color: #6d7383; cursor: pointer; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 500; transition: color 0.2s; }
 .tab:hover { color: #0a0b0d; }
 .tab.active { color: #0a0b0d; border-bottom: 2px solid #0a0b0d; }
-.sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
+.sidebar-content { flex: 1; overflow-y: auto; padding: 16px; background: #fafafa; }
 
-.redaction-card { background: #fff; border: 1px solid #e2e4e9; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; }
+/* ── Review Cards ── */
+.redaction-card { background: #fff; border: 1px solid #e2e4e9; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; }
 .redaction-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .card-type { font-size: 12px; font-weight: 600; color: #6d7383; text-transform: uppercase; letter-spacing: 0.6px; }
@@ -44,6 +72,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .card-btn.primary { background: #0a0b0d; color: #fff; border: none; }
 .card-btn.primary:hover { background: #2d3039; }
 
+/* ── Popups ── */
 .hover-popup { position: fixed; background: #fff; border: 1px solid #e2e4e9; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); display: flex; padding: 4px; z-index: 1000; gap: 4px; }
 .hover-btn { padding: 6px 12px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; border-radius: 4px; color: #2d3039; }
 .hover-btn:hover { background: #f4f5f7; }
@@ -56,6 +85,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .removal-actions button.cancel { background: transparent; color: #fff; border: 1px solid #4a4d55; }
 .removal-actions button.cancel:hover { background: #2d3039; }
 
+/* ── Modals & Export flow ── */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,11,13,0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; }
 .modal { background: #fff; width: 540px; max-width: 90vw; border-radius: 12px; padding: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
 .modal h2 { margin-bottom: 16px; font-size: 20px; font-weight: 600; color: #0a0b0d; }
@@ -75,6 +105,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .btn-solid:hover { background: #2d3039; }
 .btn-solid:disabled { background: #9499a8; cursor: not-allowed; }
 
+/* ── Document Selection ── */
 .selection-popup { position: fixed; background: #fff; border: 1px solid #e2e4e9; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 16px; z-index: 1000; display: flex; flex-direction: column; gap: 12px; width: 300px; }
 .selection-row { display: flex; gap: 8px; align-items: center; }
 .selection-row select { flex: 1; padding: 8px; border: 1px solid #e2e4e9; border-radius: 6px; font-size: 14px; outline: none; }
