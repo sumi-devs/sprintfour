@@ -103,7 +103,7 @@
             "text": "business transaction",
             "type": "OTHER",
             "confidence": 1,
-            "status": "visible",
+            "status": "redacted",
             "source": "manual"
           }
         ]
