@@ -4,6 +4,8 @@
 
 Problem 3: Sam is moving fast and trusts the tool a little too much, so mistakes like false positives and false negatives slip through. I built this to break his autopilot but keep manual corrections fast.
 
+https://github.com/user-attachments/assets/78387ae4-69f3-4a1f-8d41-f15bd64387fc
+
 ## Features
 
 - **Colour-coded redactions**: High positive score (>75) is hard black, medium (50-75) is dark blue, and low (<50) is yellow. User added redactions are black. Removals get a translucent red border.
