@@ -22,10 +22,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .collapse-btn:hover { background: #f0f1f4; }
 .doc-list { padding: 20px 16px; display: flex; flex-direction: column; gap: 24px; opacity: 1; transition: opacity 0.2s; white-space: nowrap; }
 .collapsed .doc-list { opacity: 0; pointer-events: none; }
-.doc-item { display: flex; flex-direction: column; gap: 10px; }
-.doc-title { font-size: 14px; font-weight: 600; color: #0a0b0d; }
-.doc-versions { padding: 10px; border: 1px solid #e2e4e9; border-radius: 6px; background: #fff; font-size: 13px; color: #2d3039; outline: none; cursor: pointer; }
-.doc-versions:focus { border-color: #0a0b0d; }
+.doc-item { display: flex; flex-direction: column; gap: 8px; cursor: pointer; }
+.doc-title-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.doc-title { font-size: 14px; font-weight: 600; color: #0a0b0d; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-title.inactive { color: #6d7383; font-weight: 500; }
+.doc-item:hover .doc-title.inactive { color: #0a0b0d; }
+.doc-versions { padding: 4px; border: none; background: transparent; font-size: 13px; color: #6d7383; outline: none; cursor: pointer; width: 24px; }
+.doc-versions:focus, .doc-versions:hover { color: #0a0b0d; }
 
 /* ── Center Document ── */
 .document-pane { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 64px 40px; background: #fff; }
@@ -73,11 +76,6 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .card-btn.primary:hover { background: #2d3039; }
 
 /* ── Popups ── */
-.hover-popup { position: fixed; background: #fff; border: 1px solid #e2e4e9; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); display: flex; padding: 4px; z-index: 1000; gap: 4px; }
-.hover-btn { padding: 6px 12px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; border-radius: 4px; color: #2d3039; }
-.hover-btn:hover { background: #f4f5f7; }
-.hover-btn.remove { color: #dc2626; }
-
 .removal-confirm { position: fixed; background: #0a0b0d; color: #fff; padding: 14px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 1010; font-size: 14px; display: flex; flex-direction: column; gap: 12px; width: 220px; }
 .removal-confirm p { margin: 0; font-weight: 500; }
 .removal-actions { display: flex; gap: 8px; justify-content: flex-end; }

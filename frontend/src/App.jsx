@@ -44,13 +44,16 @@ const getUnredacted = (fullTxt, reds) => {
 };
 
 export default function App() {
+  const [docList, setDocList] = useState([]);
   const [doc, setDoc] = useState('');
   const [id, setId] = useState('');
   const [reds, setReds] = useState([]);
   const [origReds, setOrigReds] = useState(null);
+  const [curDocId, setCurDocId] = useState('api');
 
-  const [tab, setTab] = useState('Redactions'); // Redactions | Risks | Removals
-  const [hov, setHov] = useState(null);
+  const [tab, setTab] = useState('Risks'); // Risks | Redactions | Removals
+  const [leftCol, setLeftCol] = useState(false);
+  
   const [conf, setConf] = useState(null);
   const [sel, setSel] = useState(null);
   const [selT, setSelT] = useState(TYPES[0]);
@@ -63,43 +66,70 @@ export default function App() {
   const [quizAns, setQuizAns] = useState(null);
 
   const vRef = useRef(null);
-  const hovTimer = useRef(null);
 
-  // load doc
-  const load = useCallback(async () => {
-    const r = await fetch(`${API}/api/document`);
-    const d = await r.json();
-    setId(d.documentId);
-    setDoc(d.documentText.replace(/—/g, '-'));
-    setReds(d.redactions);
-    setOrigReds(JSON.parse(JSON.stringify(d.redactions)));
+  // load doc list
+  const loadDocs = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/api/documents`);
+      const d = await r.json();
+      setDocList(d);
+    } catch (e) {
+      console.log('Failed to fetch doc list');
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // load specific doc
+  const loadDoc = useCallback(async (docId) => {
+    try {
+      const r = await fetch(`${API}/api/document/${docId}`);
+      const d = await r.json();
+      setId(d.documentId);
+      setDoc(d.documentText.replace(/—/g, '-'));
+      setReds(d.redactions);
+      setOrigReds(JSON.parse(JSON.stringify(d.redactions)));
+      setCurDocId(docId);
+      setConf(null);
+    } catch (e) {
+      console.log('Failed to load doc');
+    }
+  }, []);
+
+  useEffect(() => { 
+    loadDocs();
+    loadDoc('api'); 
+  }, [loadDocs, loadDoc]);
 
   // toggle red
   const tog = async (rId, cur) => {
     const n = cur === 'redacted' ? 'visible' : 'redacted';
-    const r = await fetch(`${API}/api/document/redactions/${rId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: n }),
-    });
-    const u = await r.json();
-    setReds((p) => p.map((x) => (x.id === rId ? { ...x, ...u } : x)));
-    setHov(null);
+    try {
+      const r = await fetch(`${API}/api/document/${curDocId}/redactions/${rId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: n }),
+      });
+      const u = await r.json();
+      setReds((p) => p.map((x) => (x.id === rId ? { ...x, ...u } : x)));
+    } catch (e) {
+      setReds((p) => p.map((x) => (x.id === rId ? { ...x, status: n } : x)));
+    }
     setConf(null);
   };
 
   // new red
   const add = async (txt, typ) => {
-    const r = await fetch(`${API}/api/document/redactions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: txt, type: typ }),
-    });
-    const u = await r.json();
-    setReds((p) => [...p, u]);
+    try {
+      const r = await fetch(`${API}/api/document/${curDocId}/redactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: txt, type: typ }),
+      });
+      const u = await r.json();
+      setReds((p) => [...p, u]);
+    } catch (e) {
+      const u = { id: 'new-' + Date.now(), text: txt, type: typ, confidence: 1, status: 'redacted' };
+      setReds((p) => [...p, u]);
+    }
     setSel(null);
     setProx([]);
   };
@@ -131,26 +161,12 @@ export default function App() {
     }, 100);
   };
 
-  // hover start
-  const startHov = (e, r) => {
-    if (conf) return;
-    clearTimeout(hovTimer.current);
-    const rt = e.target.getBoundingClientRect();
-    setHov({ id: r.id, x: rt.left, y: rt.top - 40, item: r });
-  };
-
-  // hover end
-  const endHov = () => {
-    hovTimer.current = setTimeout(() => setHov(null), 150);
-  };
-
   // confirm rem
   const askRem = (r, rect) => {
     setConf({ id: r.id, x: rect.left, y: rect.top - 80, item: r });
-    setHov(null);
   };
 
-  // handle rem click
+  // handle rem click from sidebar
   const handleRem = (r, el = null) => {
     if (r.confidence >= 0.75) {
       let rect = { left: window.innerWidth / 2 - 100, top: window.innerHeight / 2 };
@@ -165,10 +181,53 @@ export default function App() {
     }
   };
 
+  // handle span click directly
+  const handleSpanClick = (e, r) => {
+    if (r.status === 'redacted') {
+      const og = origReds?.find(o => o.id === r.id);
+      if (r.confidence >= 0.75 && og) {
+        askRem(r, e.target.getBoundingClientRect());
+      } else {
+        tog(r.id, 'redacted');
+      }
+    } else {
+      if (r.isNew) add(r.text, r.type);
+      else tog(r.id, 'visible');
+    }
+  };
+
+  // prep sidebar lists
+  const unredactedIssues = getUnredacted(doc, reds);
+  const risksList = [];
+  reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
+  
+  const unredactedFakeReds = unredactedIssues.map((u, i) => ({
+    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true 
+  }));
+  risksList.push(...unredactedFakeReds);
+
+  const removalsList = reds.filter(r => {
+    const og = origReds?.find(o => o.id === r.id);
+    return og && og.status === 'redacted' && r.status === 'visible';
+  });
+
+  const redactionsList = reds.filter(r => r.status === 'redacted');
+
+  // get list for current tab
+  let curList = [];
+  if (tab === 'Risks') curList = risksList;
+  else if (tab === 'Redactions') curList = redactionsList;
+  else if (tab === 'Removals') curList = removalsList;
+  
+  curList.sort((a, b) => b.confidence - a.confidence);
+
   // build spans
   const buildDoc = () => {
     if (!doc) return null;
-    const pos = reds.map((r) => {
+
+    // merge real redactions and unredacted issues (risks) so they are ALL highlighted in text
+    const allItems = [...reds, ...unredactedFakeReds];
+    const pos = allItems.map((r) => {
       const i = doc.indexOf(r.text);
       return i >= 0 ? { ...r, s: i, e: i + r.text.length } : null;
     }).filter(Boolean).sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
@@ -188,7 +247,7 @@ export default function App() {
       let cls = 'span-base ';
       const og = origReds?.find(o => o.id === r.id);
       const isAd = !og;
-      const isRm = og && og.status === 'redacted' && r.status === 'visible';
+      const isRm = (og && og.status === 'redacted' && r.status === 'visible') || r.isNew;
 
       if (r.status === 'redacted') {
         if (isAd) cls += 'redact-user';
@@ -205,8 +264,7 @@ export default function App() {
           key={r.id} 
           id={`span-${r.id}`}
           className={cls}
-          onMouseEnter={(e) => startHov(e, r)}
-          onMouseLeave={endHov}
+          onClick={(e) => handleSpanClick(e, r)}
         >
           {r.text}
         </span>
@@ -225,7 +283,7 @@ export default function App() {
         blk.push({ ...r, reason: 'High risk' });
       }
     });
-    blk.push(...getUnredacted(doc, reds));
+    blk.push(...unredactedIssues);
 
     if (blk.length > 0) {
       setExpItems(blk);
@@ -259,96 +317,131 @@ export default function App() {
     setQuizAns(null);
   };
 
-  // fin exp
+  // fin exp -> actual file download
   const finExp = () => {
     setExpState(null);
-    alert('exported');
+    
+    // sort redactions by position to replace correctly
+    const pos = reds.map((r) => {
+      const i = doc.indexOf(r.text);
+      return i >= 0 ? { ...r, s: i, e: i + r.text.length } : null;
+    }).filter(Boolean).sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
+
+    const non = [];
+    let le = 0;
+    for (const r of pos) {
+      if (r.s >= le) { non.push(r); le = r.e; }
+    }
+
+    let finalTxt = '';
+    let cur = 0;
+    for (const r of non) {
+      finalTxt += doc.slice(cur, r.s);
+      if (r.status === 'redacted') {
+        finalTxt += '█'.repeat(r.text.length);
+      } else {
+        finalTxt += r.text;
+      }
+      cur = r.e;
+    }
+    finalTxt += doc.slice(cur);
+
+    const blob = new Blob([finalTxt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Conseal_${curDocId}_Redacted.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  // prep sidebar lists
-  const unredactedIssues = getUnredacted(doc, reds);
-  const risksList = [];
-  reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
-  unredactedIssues.forEach((u, i) => {
-    risksList.push({ id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true });
-  });
-
-  const removalsList = reds.filter(r => {
-    const og = origReds?.find(o => o.id === r.id);
-    return og && og.status === 'redacted' && r.status === 'visible';
-  });
-
-  const redactionsList = reds.filter(r => r.status === 'redacted');
-
-  // get list for current tab
-  let curList = [];
-  if (tab === 'Redactions') curList = redactionsList;
-  else if (tab === 'Risks') curList = risksList;
-  else if (tab === 'Removals') curList = removalsList;
-  
-  curList.sort((a, b) => b.confidence - a.confidence);
-
   return (
-    <div className="layout" onClick={clearSel}>
-      <div className="main-area">
-        <div className="header">
+    <div className="app-container" onClick={clearSel}>
+      <div className="top-header">
+        <div className="logo-area">
           <div className="logo">Conseal</div>
-          <button className="export-btn" onClick={doExp}>Export</button>
         </div>
-        <div className="document-container" ref={vRef} onMouseUp={handleUp}>
-          {buildDoc()}
-        </div>
+        <div className="header-title">Redaction Safety Check / Correction Tool</div>
+        <div className="header-right"></div>
       </div>
 
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-title">Review</div>
-          <div className="sidebar-tabs">
-            <div className={`tab ${tab === 'Redactions' ? 'active' : ''}`} onClick={() => setTab('Redactions')}>
-              Redactions ({redactionsList.length})
-            </div>
-            <div className={`tab ${tab === 'Risks' ? 'active' : ''}`} onClick={() => setTab('Risks')}>
-              Risks ({risksList.length})
-            </div>
-            <div className={`tab ${tab === 'Removals' ? 'active' : ''}`} onClick={() => setTab('Removals')}>
-              Removals ({removalsList.length})
-            </div>
+      <div className="workspace">
+        <div className={`left-sidebar ${leftCol ? 'collapsed' : ''}`}>
+          <div className="left-sidebar-header">
+            <button className="collapse-btn" onClick={() => setLeftCol(!leftCol)}>
+              {leftCol ? '▶' : '◀'}
+            </button>
+          </div>
+          <div className="doc-list">
+            
+            {docList.map(d => (
+              <div key={d.id} className="doc-item" onClick={() => loadDoc(d.id)}>
+                <div className="doc-title-row">
+                  <span className={`doc-title ${curDocId !== d.id ? 'inactive' : ''}`}>{d.title}</span>
+                  {curDocId === d.id && (
+                    <select className="doc-versions" onClick={(e) => e.stopPropagation()}>
+                      <option value="current">▼</option>
+                      <option value="original">Original</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+            ))}
+
           </div>
         </div>
-        <div className="sidebar-content">
-          {curList.length === 0 && (
-            <div style={{ color: '#6d7383', fontSize: 14, textAlign: 'center', marginTop: 20 }}>No items here.</div>
-          )}
-          {curList.map(r => (
-            <div key={r.id} className="redaction-card">
-              <div className="card-header">
-                <span className="card-type">{r.type}</span>
-                <span className={`card-risk ${r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low'}`}>
-                  {r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk'}
-                </span>
+
+        <div className="document-pane" ref={vRef} onMouseUp={handleUp}>
+          <div className="document-content">
+            {buildDoc()}
+          </div>
+        </div>
+
+        <div className="sidebar">
+          <div className="sidebar-header">
+            <div className="sidebar-top-row">
+              <div className="sidebar-title">Review</div>
+              <button className="export-btn" onClick={doExp}>Export</button>
+            </div>
+            <div className="sidebar-tabs">
+              <div className={`tab ${tab === 'Risks' ? 'active' : ''}`} onClick={() => setTab('Risks')}>
+                Risks ({risksList.length})
               </div>
-              <div className="card-text">{r.text}</div>
-              <div className="card-actions">
-                {r.status === 'visible' ? (
-                  <button className="card-btn primary" onClick={() => r.isNew ? add(r.text, r.type) : tog(r.id, 'visible')}>Redact</button>
-                ) : (
-                  <button className="card-btn" onClick={() => handleRem(r)}>Remove</button>
-                )}
+              <div className={`tab ${tab === 'Redactions' ? 'active' : ''}`} onClick={() => setTab('Redactions')}>
+                Redactions ({redactionsList.length})
+              </div>
+              <div className={`tab ${tab === 'Removals' ? 'active' : ''}`} onClick={() => setTab('Removals')}>
+                Removals ({removalsList.length})
               </div>
             </div>
-          ))}
+          </div>
+          <div className="sidebar-content">
+            {curList.length === 0 && (
+              <div style={{ color: '#6d7383', fontSize: 14, textAlign: 'center', marginTop: 20 }}>No items here.</div>
+            )}
+            {curList.map(r => (
+              <div key={r.id} className="redaction-card">
+                <div className="card-header">
+                  <span className="card-type">{r.type}</span>
+                  <span className={`card-risk ${r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low'}`}>
+                    {r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk'}
+                  </span>
+                </div>
+                <div className="card-text">{r.text}</div>
+                <div className="card-actions">
+                  {r.status === 'visible' ? (
+                    <button className="card-btn primary" onClick={() => r.isNew ? add(r.text, r.type) : tog(r.id, 'visible')}>Redact</button>
+                  ) : (
+                    <button className="card-btn" onClick={() => handleRem(r)}>Remove</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-
-      {hov && (
-        <div className="hover-popup" style={{ left: hov.x, top: hov.y }} onMouseEnter={() => clearTimeout(hovTimer.current)} onMouseLeave={endHov}>
-          {hov.item.status === 'visible' ? (
-            <button className="hover-btn" onClick={() => tog(hov.id, 'visible')}>Redact</button>
-          ) : (
-            <button className="hover-btn remove" onClick={(e) => handleRem(hov.item, e.target.parentElement)}>Remove</button>
-          )}
-        </div>
-      )}
 
       {conf && (
         <div className="removal-confirm" style={{ left: conf.x, top: conf.y }}>
