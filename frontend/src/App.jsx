@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import jsPDF from 'jspdf';
 
 const API = 'http://localhost:3001';
 const TYPES = ['PERSON', 'PHONE', 'EMAIL', 'DATE', 'MONEY', 'ID_NUMBER', 'OTHER'];
@@ -46,10 +47,14 @@ const getUnredacted = (fullTxt, reds) => {
 export default function App() {
   const [docList, setDocList] = useState([]);
   const [doc, setDoc] = useState('');
+  const [docTitle, setDocTitle] = useState('');
   const [id, setId] = useState('');
   const [reds, setReds] = useState([]);
   const [origReds, setOrigReds] = useState(null);
   const [curDocId, setCurDocId] = useState('api');
+
+  // accordion state
+  const [openAccordionId, setOpenAccordionId] = useState('api');
 
   const [tab, setTab] = useState('Risks'); // Risks | Redactions | Removals
   const [leftCol, setLeftCol] = useState(false);
@@ -64,6 +69,7 @@ export default function App() {
   const [expDec, setExpDec] = useState({});
   const [quiz, setQuiz] = useState(null);
   const [quizAns, setQuizAns] = useState(null);
+  const [exportFormat, setExportFormat] = useState('txt');
 
   const vRef = useRef(null);
 
@@ -84,10 +90,12 @@ export default function App() {
       const r = await fetch(`${API}/api/document/${docId}`);
       const d = await r.json();
       setId(d.documentId);
+      setDocTitle(d.title || d.documentId);
       setDoc(d.documentText.replace(/—/g, '-'));
       setReds(d.redactions);
       setOrigReds(JSON.parse(JSON.stringify(d.redactions)));
       setCurDocId(docId);
+      setOpenAccordionId(docId);
       setConf(null);
     } catch (e) {
       console.log('Failed to load doc');
@@ -127,9 +135,19 @@ export default function App() {
       const u = await r.json();
       setReds((p) => [...p, u]);
     } catch (e) {
-      const u = { id: 'new-' + Date.now(), text: txt, type: typ, confidence: 1, status: 'redacted' };
+      const u = { id: 'new-' + Date.now() + Math.random(), text: txt, type: typ, confidence: 1, status: 'redacted' };
       setReds((p) => [...p, u]);
     }
+  };
+
+  const handleAdd = (txt, typ) => {
+    add(txt, typ);
+    setSel(null);
+    setProx([]);
+  };
+
+  const handleAddMulti = (txtList, typ) => {
+    txtList.forEach(t => add(t, typ));
     setSel(null);
     setProx([]);
   };
@@ -151,7 +169,8 @@ export default function App() {
   };
 
   // clear select
-  const clearSel = () => {
+  const clearSel = (e) => {
+    if (e.target.closest('.selection-popup')) return;
     setTimeout(() => {
       const s = window.getSelection();
       if (!s || !s.toString().trim()) {
@@ -276,7 +295,8 @@ export default function App() {
   };
 
   // do export
-  const doExp = () => {
+  const doExp = (format) => {
+    setExportFormat(format);
     const blk = [];
     reds.forEach((r) => {
       if (r.status === 'visible' && r.confidence >= 0.75) {
@@ -346,15 +366,44 @@ export default function App() {
     }
     finalTxt += doc.slice(cur);
 
-    const blob = new Blob([finalTxt], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Conseal_${curDocId}_Redacted.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (exportFormat === 'pdf') {
+      const pdf = new jsPDF();
+      pdf.setFontSize(12);
+      const margin = 15;
+      const pageHeight = pdf.internal.pageSize.height;
+      const textLines = pdf.splitTextToSize(finalTxt, pdf.internal.pageSize.width - (margin * 2));
+      let y = margin;
+      for (let i = 0; i < textLines.length; i++) {
+        if (y > pageHeight - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(textLines[i], margin, y);
+        y += 7;
+      }
+      pdf.save(`Conseal_${curDocId}_Redacted.pdf`);
+    } else {
+      const blob = new Blob([finalTxt], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Conseal_${curDocId}_Redacted.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleDocClick = (id) => {
+    if (openAccordionId === id) {
+      setOpenAccordionId(null);
+    } else {
+      setOpenAccordionId(id);
+      if (curDocId !== id) {
+        loadDoc(id);
+      }
+    }
   };
 
   return (
@@ -376,19 +425,23 @@ export default function App() {
           </div>
           <div className="doc-list">
             
-            {docList.map(d => (
-              <div key={d.id} className="doc-item" onClick={() => loadDoc(d.id)}>
-                <div className="doc-title-row">
-                  <span className={`doc-title ${curDocId !== d.id ? 'inactive' : ''}`}>{d.title}</span>
-                  {curDocId === d.id && (
-                    <select className="doc-versions" onClick={(e) => e.stopPropagation()}>
-                      <option value="current">▼</option>
-                      <option value="original">Original</option>
-                    </select>
+            {docList.map(d => {
+              const isOpen = openAccordionId === d.id;
+              return (
+                <div key={d.id} className="doc-item">
+                  <div className="doc-title-row" onClick={() => handleDocClick(d.id)}>
+                    <span className={`doc-title ${curDocId !== d.id ? 'inactive' : ''}`}>{d.title}</span>
+                    <span className={`accordion-icon ${isOpen ? 'open' : ''}`}>▼</span>
+                  </div>
+                  {isOpen && (
+                    <div className="accordion-content">
+                      <div className="version-item active">Current (Edited)</div>
+                      <div className="version-item">Original Version</div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
           </div>
         </div>
@@ -403,7 +456,10 @@ export default function App() {
           <div className="sidebar-header">
             <div className="sidebar-top-row">
               <div className="sidebar-title">Review</div>
-              <button className="export-btn" onClick={doExp}>Export</button>
+              <div className="export-actions">
+                <button className="export-btn outline" onClick={() => doExp('txt')}>TXT</button>
+                <button className="export-btn" onClick={() => doExp('pdf')}>PDF</button>
+              </div>
             </div>
             <div className="sidebar-tabs">
               <div className={`tab ${tab === 'Risks' ? 'active' : ''}`} onClick={() => setTab('Risks')}>
@@ -443,6 +499,16 @@ export default function App() {
         </div>
       </div>
 
+      <div className="help-icon">
+        ?
+        <div className="legend-popup">
+          <div className="legend-item"><div className="legend-box lb-high"></div> High Confidence (&gt;90%)</div>
+          <div className="legend-item"><div className="legend-box lb-med"></div> Medium Confidence (50-75%)</div>
+          <div className="legend-item"><div className="legend-box lb-low"></div> Low Confidence (&lt;50%)</div>
+          <div className="legend-item"><div className="legend-box lb-risk"></div> Unredacted Risk (Grey Border)</div>
+        </div>
+      </div>
+
       {conf && (
         <div className="removal-confirm" style={{ left: conf.x, top: conf.y }}>
           <p>Are you sure?</p>
@@ -459,12 +525,12 @@ export default function App() {
             <select value={selT} onChange={(e) => { setSelT(e.target.value); setProx(getAdj(sel.text, doc, reds)); }}>
               {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
-            <button onClick={() => add(sel.text, selT)}>Redact</button>
+            <button onClick={() => handleAdd(sel.text, selT)}>Redact</button>
           </div>
           {prox.length > 0 && (
             <div className="proximity-hint">
               {prox.map(p => (
-                <button key={p} onClick={() => add(p, selT)}>Redact "{p}" too?</button>
+                <button key={p} onClick={() => handleAddMulti([sel.text, p], selT)}>Redact "{p}" too?</button>
               ))}
             </div>
           )}
@@ -513,7 +579,7 @@ export default function App() {
             </div>
             <div className="modal-footer">
               <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
-              <button className="btn-solid" disabled={!quizAns} onClick={finExp}>Export</button>
+              <button className="btn-solid" disabled={!quizAns} onClick={finExp}>Export {exportFormat.toUpperCase()}</button>
             </div>
           </div>
         </div>

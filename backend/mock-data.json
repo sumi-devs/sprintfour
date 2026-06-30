@@ -1,92 +1,101 @@
 {
   "api": {
     "documentId": "api",
-    "documentText": "Subject: Re: Account Access Issue - Ticket #48291\n\nHi support team,\n\nMy name is Daniel Reyes and I'm having trouble logging into my account. I tried resetting my password but never received the reset email. Could you check if there's an issue tied to daniel.reyes88@gmail.com?\n\nFor reference, my account was created in March 2019, and I've been a customer for about five years now. My customer ID is CX-20394857.\n\nIf it's easier, you can reach me directly at (512) 555-0199 - I'm usually free in the afternoons. Alternatively, my assistant Maria Chen can help at maria.chen@outlook.com or (415) 555-0342.\n\nThanks,\nJames Patterson",
+    "title": "Non-Disclosure Agreement (NDA)",
+    "documentText": "MUTUAL NON-DISCLOSURE AGREEMENT\n\nThis Mutual Non-Disclosure Agreement (this \"Agreement\") is entered into as of October 12, 2024, by and between Apex Global Solutions Inc., a Delaware corporation, located at 1500 Corporate Drive, Suite 200, San Francisco, CA 94107, and Vertex Technologies LLC, located at 8421 Summit Boulevard, Austin, TX 78701.\n\nWHEREAS, the parties intend to engage in discussions regarding a potential business transaction or partnership (the \"Purpose\"). In connection with the Purpose, each party may disclose to the other party certain confidential and proprietary information.\n\nNOW, THEREFORE, in consideration of the mutual covenants contained herein, the parties agree as follows:\n\n1. Confidential Information. \"Confidential Information\" means all non-public information disclosed by one party (the \"Disclosing Party\") to the other party (the \"Receiving Party\"), including but not limited to financial projections, customer lists, and proprietary algorithms. For instance, the specifics of Project Titan and the associated budget of $4,500,000.00 shall be deemed highly confidential.\n\n2. Representatives. The Receiving Party may disclose Confidential Information only to its employees and advisors who need to know such information for the Purpose. Vertex Technologies LLC designates Sarah Jenkins (sarah.jenkins@vertextech.com) and Michael Cho (Phone: (512) 555-0899) as the primary points of contact for this exchange.\n\n3. Term. This Agreement shall remain in effect for a period of three (3) years from the Effective Date. The Receiving Party's duty to protect Confidential Information shall expire five (5) years from the date of disclosure.\n\nIN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date.\n\nApex Global Solutions Inc.\nBy: David O'Connor\nTitle: Chief Strategy Officer\n\nVertex Technologies LLC\nBy: Elena Rostova\nTitle: VP of Partnerships",
     "redactions": [
       {
-        "id": "red-1",
-        "text": "Daniel Reyes",
+        "id": "r-1",
+        "text": "Apex Global Solutions Inc.",
+        "type": "PERSON",
+        "confidence": 0.45,
+        "status": "redacted",
+        "source": "manual"
+      },
+      {
+        "id": "r-2",
+        "text": "1500 Corporate Drive, Suite 200, San Francisco, CA 94107",
+        "type": "OTHER",
+        "confidence": 0.85,
+        "status": "redacted"
+      },
+      {
+        "id": "r-3",
+        "text": "Vertex Technologies LLC",
+        "type": "PERSON",
+        "confidence": 0.42,
+        "status": "redacted",
+        "source": "manual"
+      },
+      {
+        "id": "r-4",
+        "text": "8421 Summit Boulevard, Austin, TX 78701",
+        "type": "OTHER",
+        "confidence": 0.82,
+        "status": "redacted",
+        "source": "manual"
+      },
+      {
+        "id": "r-5",
+        "text": "Project Titan",
+        "type": "OTHER",
+        "confidence": 0.65,
+        "status": "redacted",
+        "source": "manual"
+      },
+      {
+        "id": "r-6",
+        "text": "$4,500,000.00",
+        "type": "MONEY",
+        "confidence": 0.98,
+        "status": "redacted"
+      },
+      {
+        "id": "r-7",
+        "text": "Sarah Jenkins",
+        "type": "PERSON",
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "r-8",
+        "text": "sarah.jenkins@vertextech.com",
+        "type": "EMAIL",
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "r-9",
+        "text": "Michael Cho",
         "type": "PERSON",
         "confidence": 0.98,
         "status": "redacted"
       },
       {
-        "id": "red-2",
-        "text": "daniel.reyes88@gmail.com",
-        "type": "EMAIL",
-        "confidence": 0.99,
-        "status": "visible",
-        "source": "manual"
-      },
-      {
-        "id": "red-3",
-        "text": "March 2019",
-        "type": "DATE",
-        "confidence": 0.45,
-        "status": "redacted"
-      },
-      {
-        "id": "red-4",
-        "text": "five years",
-        "type": "DATE",
-        "confidence": 0.35,
-        "status": "redacted",
-        "source": "manual"
-      },
-      {
-        "id": "red-5",
-        "text": "CX-20394857",
-        "type": "ID_NUMBER",
-        "confidence": 0.65,
-        "status": "redacted"
-      },
-      {
-        "id": "red-6",
-        "text": "(512) 555-0199",
+        "id": "r-10",
+        "text": "(512) 555-0899",
         "type": "PHONE",
         "confidence": 0.97,
-        "status": "redacted",
-        "source": "manual"
-      },
-      {
-        "id": "red-7",
-        "text": "Maria Chen",
-        "type": "PERSON",
-        "confidence": 0.94,
         "status": "redacted"
       },
       {
-        "id": "red-8",
-        "text": "maria.chen@outlook.com",
-        "type": "EMAIL",
+        "id": "r-11",
+        "text": "David O'Connor",
+        "type": "PERSON",
         "confidence": 0.99,
         "status": "redacted"
       },
       {
-        "id": "red-9",
-        "text": "James Patterson",
+        "id": "r-12",
+        "text": "Elena Rostova",
         "type": "PERSON",
-        "confidence": 0.96,
+        "confidence": 0.98,
         "status": "redacted"
       },
       {
-        "id": "red-10",
-        "text": "Ticket #48291",
+        "id": "manual-1782807723542",
+        "text": "business transaction",
         "type": "OTHER",
-        "confidence": 0.72,
-        "status": "redacted"
-      },
-      {
-        "id": "red-11",
-        "text": "$245.00",
-        "type": "MONEY",
-        "confidence": 0.4,
-        "status": "redacted"
-      },
-      {
-        "id": "manual-1782806349103",
-        "text": "(415) 555-0342",
-        "type": "PHONE",
         "confidence": 1,
         "status": "redacted",
         "source": "manual"
@@ -95,47 +104,140 @@
   },
   "mock-1": {
     "documentId": "mock-1",
-    "documentText": "Hi, I am reaching out regarding a billing dispute on my card for $450.00. My name is Sarah Jenkins and my phone number is (415) 555-0342. Please refund my card ending in 4092.",
+    "title": "Employment Contract",
+    "documentText": "EXECUTIVE EMPLOYMENT AGREEMENT\n\nThis Executive Employment Agreement (the \"Agreement\") is made effective as of January 15, 2025, between Nexus Analytics Group (\"Employer\") and Jonathan Mercer (\"Executive\"), residing at 402 West Elm Street, Apartment 4B, Chicago, IL 60610.\n\n1. Position and Duties. Employer agrees to employ Executive as the Chief Technology Officer (CTO). Executive will report directly to the CEO, Amanda Wright. Executive shall perform all duties customary to this role and shall devote their full business time and efforts to the Employer.\n\n2. Compensation. In consideration for the services to be performed, Employer agrees to pay Executive a base salary of $275,000.00 per year, payable in accordance with the Employer's standard payroll practices. Additionally, Executive is eligible for an annual performance bonus of up to $50,000.00.\n\n3. Benefits. Executive will be entitled to participate in all employee benefit plans offered by the Employer, including health insurance, 401(k) matching, and 25 days of paid time off per calendar year. Executive's social security number, 999-01-4432, will be required for tax withholding and benefits enrollment.\n\n4. Termination. This employment is \"at-will.\" Either party may terminate the employment relationship at any time, with or without cause, upon thirty (30) days' written notice. If Employer terminates Executive without cause, Executive shall receive a severance package equal to six (6) months of base salary.\n\nPlease direct all onboarding queries to HR at hr.onboarding@nexusanalytics.net or call (312) 555-9012.",
     "redactions": [
       {
-        "id": "r-10",
-        "text": "Sarah Jenkins",
+        "id": "m1-1",
+        "text": "Nexus Analytics Group",
         "type": "PERSON",
-        "confidence": 0.95,
+        "confidence": 0.38,
         "status": "redacted"
       },
       {
-        "id": "r-11",
-        "text": "(415) 555-0342",
-        "type": "PHONE",
+        "id": "m1-2",
+        "text": "Jonathan Mercer",
+        "type": "PERSON",
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "m1-3",
+        "text": "402 West Elm Street, Apartment 4B, Chicago, IL 60610",
+        "type": "OTHER",
+        "confidence": 0.88,
+        "status": "redacted"
+      },
+      {
+        "id": "m1-4",
+        "text": "Amanda Wright",
+        "type": "PERSON",
         "confidence": 0.98,
         "status": "redacted"
       },
       {
-        "id": "r-12",
-        "text": "$450.00",
+        "id": "m1-5",
+        "text": "$275,000.00",
         "type": "MONEY",
-        "confidence": 0.4,
+        "confidence": 0.99,
         "status": "redacted"
       },
       {
-        "id": "r-13",
-        "text": "4092",
+        "id": "m1-6",
+        "text": "$50,000.00",
+        "type": "MONEY",
+        "confidence": 0.97,
+        "status": "redacted"
+      },
+      {
+        "id": "m1-7",
+        "text": "999-01-4432",
         "type": "ID_NUMBER",
-        "confidence": 0.6,
+        "confidence": 0.96,
+        "status": "redacted"
+      },
+      {
+        "id": "m1-8",
+        "text": "hr.onboarding@nexusanalytics.net",
+        "type": "EMAIL",
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "m1-9",
+        "text": "(312) 555-9012",
+        "type": "PHONE",
+        "confidence": 0.98,
         "status": "redacted"
       }
     ]
   },
   "mock-2": {
     "documentId": "mock-2",
-    "documentText": "I want a refund. Send it to my email at john.doe@example.com.",
+    "title": "Settlement Agreement",
+    "documentText": "CONFIDENTIAL SETTLEMENT AND RELEASE AGREEMENT\n\nThis Confidential Settlement and Release Agreement (\"Agreement\") is made by and between Robert H. Kincaid (\"Plaintiff\") and Horizon Logistics Inc. (\"Defendant\"), collectively referred to as the \"Parties.\"\n\nWHEREAS, Plaintiff filed a lawsuit against Defendant in the District Court of Nevada, Case No. CV-2023-8891, alleging breach of contract and damages arising from the incident on August 14, 2023.\n\n1. Settlement Amount. In full and final settlement of all claims, Defendant agrees to pay Plaintiff the total sum of $125,500.00 (the \"Settlement Amount\"). The payment shall be made via wire transfer to the trust account of Plaintiff's counsel, Marcus Vance LLP, within fourteen (14) business days of the execution of this Agreement.\n\n2. Release of Claims. Upon receipt of the Settlement Amount, Plaintiff hereby completely and forever releases and discharges Defendant from any and all past, present, or future claims, demands, obligations, or causes of action of any nature whatsoever, whether known or unknown, arising out of the events detailed in the lawsuit.\n\n3. Confidentiality. The Parties agree that the terms, amount, and fact of this settlement shall remain strictly confidential. Neither party shall disclose this Agreement to any third party except as required by law or to their respective financial and legal advisors. Any violation of this clause shall result in a penalty of $25,000.00.\n\nFor wire transfer details, please contact accounting at finance@horizonlogistics.com or (702) 555-3314.",
     "redactions": [
       {
-        "id": "r-20",
-        "text": "john.doe@example.com",
+        "id": "m2-1",
+        "text": "Robert H. Kincaid",
+        "type": "PERSON",
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-2",
+        "text": "Horizon Logistics Inc.",
+        "type": "PERSON",
+        "confidence": 0.35,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-3",
+        "text": "CV-2023-8891",
+        "type": "ID_NUMBER",
+        "confidence": 0.85,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-4",
+        "text": "August 14, 2023",
+        "type": "DATE",
+        "confidence": 0.7,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-5",
+        "text": "$125,500.00",
+        "type": "MONEY",
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-6",
+        "text": "Marcus Vance LLP",
+        "type": "PERSON",
+        "confidence": 0.9,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-7",
+        "text": "$25,000.00",
+        "type": "MONEY",
+        "confidence": 0.96,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-8",
+        "text": "finance@horizonlogistics.com",
         "type": "EMAIL",
-        "confidence": 0.92,
+        "confidence": 0.99,
+        "status": "redacted"
+      },
+      {
+        "id": "m2-9",
+        "text": "(702) 555-3314",
+        "type": "PHONE",
+        "confidence": 0.98,
         "status": "redacted"
       }
     ]
