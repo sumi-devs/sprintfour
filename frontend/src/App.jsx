@@ -342,12 +342,13 @@ export default function App() {
 
       if (r.status === 'redacted') {
         if (isAd) cls += 'redact-user';
-        else if (r.confidence >= 0.9) cls += 'redact-high';
-        else if (r.confidence >= 0.75) cls += 'redact-high-med';
+        else if (r.confidence >= 0.75) cls += 'redact-high';
         else if (r.confidence >= 0.5) cls += 'redact-med';
         else cls += 'redact-low';
       } else {
-        cls += isRm ? 'span-removed' : 'span-removed';
+        const og = origReds?.find(o => o.id === r.id);
+        const isRemoval = og && og.status === 'redacted';
+        cls += isRemoval ? 'span-removed' : 'span-risk';
       }
 
       seg.push(
@@ -643,9 +644,10 @@ export default function App() {
       <div className="help-icon">
         ?
         <div className="legend-popup">
-          <div className="legend-item"><div className="legend-box lb-high"></div> High Confidence (&gt;90%)</div>
+          <div className="legend-item"><div className="legend-box lb-high"></div> High Confidence (&gt;75%) / User Added</div>
           <div className="legend-item"><div className="legend-box lb-med"></div> Medium Confidence (50-75%)</div>
           <div className="legend-item"><div className="legend-box lb-low"></div> Low Confidence (&lt;50%)</div>
+          <div className="legend-item"><div className="legend-box lb-removed"></div> Removal (Red Border)</div>
           <div className="legend-item"><div className="legend-box lb-risk"></div> Unredacted Risk (Grey Border)</div>
         </div>
       </div>

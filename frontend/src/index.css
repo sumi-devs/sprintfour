@@ -43,15 +43,14 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .span-base { border-radius: 4px; padding: 2px 6px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; position: relative; cursor: pointer; line-height: 1.5; margin: 0 1px; }
 .redact-high { background: #0a0b0d; color: #0a0b0d; }
 .redact-high:hover { background: rgba(10, 11, 13, 0.5); color: #0a0b0d; }
-.redact-high-med { background: rgba(10, 11, 13, 0.85); color: #1e2029; }
-.redact-high-med:hover { background: rgba(10, 11, 13, 0.5); }
-.redact-med { background: #00008b; color: #00008b; }
-.redact-med:hover { background: rgba(0, 0, 139, 0.5); color: #fff; }
-.redact-low { background: #ffd54f; color: #ffd54f; }
-.redact-low:hover { background: rgba(255, 213, 79, 0.6); color: #0a0b0d; }
-.redact-user { background: #0a0b0d; color: #0a0b0d; border: 1px solid #9499a8; }
+.redact-med { background: rgba(0, 0, 139, 0.15); color: inherit; border: 1px solid #00008b; }
+.redact-med:hover { background: rgba(0, 0, 139, 0.25); }
+.redact-low { background: rgba(255, 213, 79, 0.3); color: inherit; border: 1px solid #ffd54f; }
+.redact-low:hover { background: rgba(255, 213, 79, 0.45); }
+.redact-user { background: #0a0b0d; color: #0a0b0d; border: none; }
 .redact-user:hover { background: rgba(10, 11, 13, 0.5); }
-.span-removed { background: transparent; border: 1px solid rgba(148, 153, 168, 0.6); }
+.span-removed { background: transparent; border: 1px solid #dc2626; }
+.span-risk { background: transparent; border: 1px solid rgba(148, 153, 168, 0.6); }
 
 .help-icon { position: absolute; bottom: 24px; left: 24px; width: 36px; height: 36px; border-radius: 18px; background: #fff; border: 1px solid #e2e4e9; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: 600; color: #6d7383; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; }
 .help-icon:hover { border-color: #0a0b0d; color: #0a0b0d; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -60,8 +59,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Robo
 .legend-item { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 500; color: #2d3039; }
 .legend-box { width: 16px; height: 16px; border-radius: 4px; }
 .lb-high { background: #0a0b0d; }
-.lb-med { background: #00008b; }
-.lb-low { background: #ffd54f; }
+.lb-med { background: rgba(0, 0, 139, 0.15); border: 1px solid #00008b; }
+.lb-low { background: rgba(255, 213, 79, 0.3); border: 1px solid #ffd54f; }
+.lb-removed { background: transparent; border: 1px solid #dc2626; }
 .lb-risk { background: transparent; border: 1px solid rgba(148, 153, 168, 0.6); }
 
 .sidebar { width: 380px; background: #fff; border-left: 1px solid #e2e4e9; display: flex; flex-direction: column; flex-shrink: 0; }
