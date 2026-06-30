@@ -41,6 +41,34 @@ const getUnredacted = (fullTxt, reds) => {
   return issues;
 };
 
+const getCollisions = (fullTxt, reds) => {
+  const issues = [];
+  const redactedItems = reds.filter(r => r.status === 'redacted');
+  const uniqueRedactedTexts = [...new Set(redactedItems.map(r => r.text))];
+
+  uniqueRedactedTexts.forEach(txt => {
+    if (!txt || txt.length < 2) return;
+
+    const safeTxt = txt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const isWord = /^\w+$/.test(txt);
+    const regex = isWord ? new RegExp(`\\b${safeTxt}\\b`, 'g') : new RegExp(safeTxt, 'g');
+    const matchesInDoc = [...fullTxt.matchAll(regex)];
+
+    const trackingCount = reds.filter(r => r.text === txt).length;
+
+    if (matchesInDoc.length > trackingCount) {
+      const diff = matchesInDoc.length - trackingCount;
+      const type = redactedItems.find(r => r.text === txt)?.type || 'OTHER';
+
+      for (let i = 0; i < diff; i++) {
+        issues.push({ text: txt, type });
+      }
+    }
+  });
+
+  return issues;
+};
+
 export default function App() {
   const [docList, setDocList] = useState([]);
   const [doc, setDoc] = useState('');
@@ -55,7 +83,7 @@ export default function App() {
   const [curDocId, setCurDocId] = useState('api');
   const [openAccordionId, setOpenAccordionId] = useState('api');
 
-  const [tab, setTab] = useState('Risks'); // Risks | Redactions | Removals
+  const [tab, setTab] = useState('Risks');
   const [leftCol, setLeftCol] = useState(false);
 
   const [conf, setConf] = useState(null);
@@ -64,10 +92,6 @@ export default function App() {
   const [prox, setProx] = useState([]);
 
   const [expState, setExpState] = useState(null);
-  const [expItems, setExpItems] = useState([]);
-  const [expDec, setExpDec] = useState({});
-  const [quiz, setQuiz] = useState(null);
-  const [quizAns, setQuizAns] = useState(null);
   const [exportFormat, setExportFormat] = useState('txt');
 
   const [exportCollisions, setExportCollisions] = useState([]);
@@ -83,7 +107,6 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // load doc list
   const loadDocs = useCallback(async () => {
     try {
       const r = await fetch(`${API}/api/documents`);
@@ -94,7 +117,6 @@ export default function App() {
     }
   }, []);
 
-  // load specific doc & version
   const loadDoc = useCallback(async (docId, targetVersionId = 'current') => {
     try {
       const r = await fetch(`${API}/api/document/${docId}`);
@@ -106,8 +128,8 @@ export default function App() {
 
       const vArr = d.versions || [];
       let ver = vArr.find(v => v.id === targetVersionId);
-      if (!ver && vArr.length > 0) ver = vArr[vArr.length - 1]; // fallback to last
-      if (!ver) ver = { id: 'current', redactions: d.redactions || [] }; // extreme fallback
+      if (!ver && vArr.length > 0) ver = vArr[vArr.length - 1];
+      if (!ver) ver = { id: 'current', redactions: d.redactions || [] };
 
       setActiveVersionId(ver.id);
       setReds(ver.redactions);
@@ -174,7 +196,6 @@ export default function App() {
     }
   };
 
-  // toggle redaction
   const tog = async (rId, cur) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     const n = cur === 'redacted' ? 'visible' : 'redacted';
@@ -192,7 +213,6 @@ export default function App() {
     setConf(null);
   };
 
-  // new redaction
   const add = async (txt, typ) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     try {
@@ -221,7 +241,6 @@ export default function App() {
     setProx([]);
   };
 
-  // handle select
   const handleUp = () => {
     const s = window.getSelection();
     const t = s ? s.toString().trim() : '';
@@ -238,7 +257,6 @@ export default function App() {
     }
   };
 
-  // clear select
   const clearSel = (e) => {
     if (e.target.closest('.selection-popup')) return;
     setTimeout(() => {
@@ -250,13 +268,11 @@ export default function App() {
     }, 100);
   };
 
-  // confirm remove
   const askRem = (r, rect) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     setConf({ id: r.id, x: rect.left, y: rect.top - 80, item: r });
   };
 
-  // handle remove click from sidebar
   const handleRem = (r, el = null) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     if (r.confidence >= 0.75) {
@@ -272,7 +288,6 @@ export default function App() {
     }
   };
 
-  // handle span click directly
   const handleSpanClick = (e, r) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     if (r.status === 'redacted') {
@@ -288,14 +303,21 @@ export default function App() {
     }
   };
 
-  // prep sidebar lists
   const unredactedIssues = getUnredacted(doc, reds);
-  const risksList = [];
-  reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
+  const collisionIssues = getCollisions(doc, reds);
 
-  const unredactedFakeReds = unredactedIssues.map((u, i) => ({
-    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true
-  }));
+  const risksList = [];
+  reds.forEach(r => { if (r.status === 'visible') risksList.push(r); });
+
+  const unredactedFakeReds = [
+    ...unredactedIssues.map((u, i) => ({
+      id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true, isRegexMiss: true
+    })),
+    ...collisionIssues.map((u, i) => ({
+      id: `col-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true, isCollision: true
+    }))
+  ];
+
   risksList.push(...unredactedFakeReds);
 
   const removalsList = reds.filter(r => {
@@ -305,7 +327,6 @@ export default function App() {
 
   const redactionsList = reds.filter(r => r.status === 'redacted');
 
-  // get list for current tab
   let curList = [];
   if (tab === 'Risks') curList = risksList;
   else if (tab === 'Redactions') curList = redactionsList;
@@ -313,7 +334,6 @@ export default function App() {
 
   curList.sort((a, b) => b.confidence - a.confidence);
 
-  // build spans
   const buildDoc = () => {
     if (!doc) return null;
 
@@ -357,7 +377,7 @@ export default function App() {
       } else {
         const og = origReds?.find(o => o.id === r.id);
         const isRemoval = og && og.status === 'redacted';
-        cls += isRemoval ? 'span-removed' : (r.isRegexMiss ? 'span-regex-miss' : 'span-risk');
+        cls += isRemoval ? 'span-removed' : (r.isRegexMiss || r.isCollision ? 'span-regex-miss' : 'span-risk');
       }
 
       seg.push(
@@ -376,7 +396,6 @@ export default function App() {
     return seg;
   };
 
-  // do export
   const doExp = async (format) => {
     setExportFormat(format);
 
@@ -405,33 +424,9 @@ export default function App() {
   };
 
   const proceedExp = () => {
-    doQuiz();
+    finExp();
   };
 
-  // proc exp
-  const procCheck = async () => {
-    for (const k of Object.keys(expDec)) {
-      if (expDec[k] === 'redact') {
-        const item = expItems.find(i => i.id === k || i.text === k);
-        if (item) {
-          if (item.id) await tog(item.id, 'visible');
-          else await add(item.text, item.type);
-        }
-      }
-    }
-    doQuiz();
-  };
-
-  // do quiz
-  const doQuiz = () => {
-    setExpState('quiz');
-    const lows = reds.filter(r => r.confidence < 0.5);
-    const item = lows.length > 0 ? lows[0] : { text: 'Daniel Reyes', type: 'PERSON' };
-    setQuiz(item);
-    setQuizAns(null);
-  };
-
-  // fin exp -> actual file download
   const finExp = () => {
     setExpState(null);
 
@@ -652,8 +647,8 @@ export default function App() {
               <div key={r.id} className="redaction-card">
                 <div className="card-header">
                   <span className="card-type">{r.type}</span>
-                  <span className={`card-risk ${r.isRegexMiss ? 'risk-regex' : (r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low')}`}>
-                    {r.isRegexMiss ? 'REGEX MISS' : (r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk')}
+                  <span className={`card-risk ${r.isRegexMiss || r.isCollision ? 'risk-regex' : (r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low')}`}>
+                    {r.isRegexMiss ? 'REGEX MISS' : r.isCollision ? 'INCONSISTENCY' : (r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk')}
                   </span>
                 </div>
                 <div className="card-text">{r.text}</div>
@@ -661,7 +656,7 @@ export default function App() {
                   {r.status === 'visible' ? (
                     <button className="card-btn primary" onClick={() => r.isNew ? add(r.text, r.type) : tog(r.id, 'visible')} disabled={activeVersionId === 'original'}>Redact</button>
                   ) : (
-                    <button className="card-btn" onClick={() => handleRem(r)} disabled={activeVersionId === 'original'}>Remove</button>
+                    <button className="card-btn" onClick={(e) => handleRem(r, e.currentTarget)} disabled={activeVersionId === 'original'}>Remove</button>
                   )}
                 </div>
               </div>
@@ -716,54 +711,6 @@ export default function App() {
         </div>
       )}
 
-      {expState === 'check' && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h2>High Risk Exposed</h2>
-            <p>Are you sure?</p>
-            <div className="modal-list">
-              {expItems.map((item, i) => (
-                <div key={i} className="modal-item">
-                  <div className="modal-item-text">{item.text} <span>({item.type})</span></div>
-                  <div className="modal-item-actions">
-                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'redact' })}>✓</button>
-                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'keep' })}>✕</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="modal-footer">
-              <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
-              <button className="btn-solid" onClick={procCheck}>Continue</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {expState === 'quiz' && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h2>Quick Review</h2>
-            <p>Is this text sensitive?</p>
-            <div style={{ padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px' }}>
-              <strong>{quiz?.text}</strong>
-            </div>
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
-                <input type="radio" checked={quizAns === 'yes'} onChange={() => setQuizAns('yes')} /> Yes
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
-                <input type="radio" checked={quizAns === 'no'} onChange={() => setQuizAns('no')} /> No
-              </label>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
-              <button className="btn-solid" disabled={!quizAns} onClick={finExp}>Export {exportFormat.toUpperCase()}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {expState === 'collision' && (
         <div className="modal-overlay">
           <div className="modal">
@@ -771,14 +718,44 @@ export default function App() {
             <p>The following entities have conflicting states. They are redacted in some places but left visible in others. You must resolve these internal collisions before exporting.</p>
             <div className="modal-list" style={{ marginTop: '16px' }}>
               {exportCollisions.map((text, i) => (
-                <div key={i} className="modal-item">
+                <div key={i} className="modal-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="modal-item-text"><strong>{text}</strong></div>
+                  <button
+                    className="btn-solid"
+                    style={{ padding: '6px 12px', fontSize: '12px', marginLeft: '12px' }}
+                    onClick={async () => {
+                      const visibleExisting = reds.filter(r => r.text === text && r.status === 'visible');
+                      for (const vItem of visibleExisting) {
+                        if (vItem.id) await tog(vItem.id, 'visible');
+                      }
+
+                      const safeTxt = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                      const isWord = /^\w+$/.test(text);
+                      const regex = isWord ? new RegExp(`\\b${safeTxt}\\b`, 'g') : new RegExp(safeTxt, 'g');
+                      const docCount = [...doc.matchAll(regex)].length;
+                      const trackingCount = reds.filter(r => r.text === text).length;
+
+                      for (let j = 0; j < (docCount - trackingCount); j++) {
+                        await add(text, 'OTHER');
+                      }
+
+                      const remaining = exportCollisions.filter((_, index) => index !== i);
+                      setExportCollisions(remaining);
+
+                      if (remaining.length === 0) {
+                        setExpState(null);
+                        doExp(exportFormat);
+                      }
+                    }}
+                  >
+                    Redact All
+                  </button>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: '13px', color: '#6d7383', marginTop: '12px' }}>* Unredacted instances have been auto-flagged in your document as visible risks. Please find them and redact them.</p>
+            <p style={{ fontSize: '13px', color: '#6d7383', marginTop: '12px' }}>* Resolve all items above to proceed with export.</p>
             <div className="modal-footer">
-              <button className="btn-outline" onClick={() => setExpState(null)}>Close & Resolve</button>
+              <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -797,7 +774,6 @@ export default function App() {
                     className="btn-solid"
                     style={{ padding: '6px 12px', fontSize: '12px', marginLeft: '12px' }}
                     onClick={async () => {
-
                       if (item.id) {
                         await tog(item.id, 'visible');
                       } else {
@@ -812,7 +788,7 @@ export default function App() {
                       }
                     }}
                   >
-                    Redact
+                    Redact Immediately
                   </button>
                 </div>
               ))}
