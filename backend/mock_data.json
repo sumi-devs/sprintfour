@@ -1,0 +1,48 @@
+{
+  "documentId": "doc-001",
+  "documentText": "Subject: Re: Account Access Issue – Ticket #48291\n\nHi support team,\n\nMy name is Daniel Reyes and I'm having trouble logging into my account. I tried resetting my password but never received the reset email. Could you check if there's an issue tied to daniel.reyes88@gmail.com?\n\nFor reference, my account was created in March 2019, and I've been a customer for about five years now.\n\nIf it's easier, you can reach me directly at (512) 555-0199 — I'm usually free in the afternoons.\n\nI also noticed a charge of $245.00 from \"Bright Horizon Consulting\" on my last statement that I don't recognize. Could someone look into that?\n\nThanks,\nDaniel",
+  "redactions": [
+    {
+      "id": "r1",
+      "text": "Daniel Reyes",
+      "type": "PERSON",
+      "confidence": 0.97,
+      "status": "redacted"
+    },
+    {
+      "id": "r2",
+      "text": "daniel.reyes88@gmail.com",
+      "type": "EMAIL",
+      "confidence": 0.95,
+      "status": "redacted"
+    },
+    {
+      "id": "r3",
+      "text": "March 2019",
+      "type": "DATE",
+      "confidence": 0.58,
+      "status": "redacted"
+    },
+    {
+      "id": "r4",
+      "text": "five years",
+      "type": "DATE",
+      "confidence": 0.49,
+      "status": "redacted"
+    },
+    {
+      "id": "r5",
+      "text": "$245.00",
+      "type": "MONEY",
+      "confidence": 0.55,
+      "status": "redacted"
+    },
+    {
+      "id": "r6",
+      "text": "Ticket #48291",
+      "type": "ID_NUMBER",
+      "confidence": 0.68,
+      "status": "redacted"
+    }
+  ]
+}
