@@ -176,6 +176,83 @@ app.post("/api/document/:docId/versions", (req, res) => {
     res.status(201).json(newVersion);
 });
 
+// GET: validate entity consistency and risks before export
+app.get("/api/document/:docId/versions/:versionId/validate", (req, res) => {
+    const { docId, versionId } = req.params;
+    const data = loadData();
+    const doc = data[docId] || data["api"];
+    
+    if (!doc || !doc.versions) {
+        return res.status(404).json({ error: "Document or versions not found" });
+    }
+
+    const version = doc.versions.find(v => v.id === versionId);
+    if (!version) {
+        return res.status(404).json({ error: "Version not found" });
+    }
+
+    const redactions = version.redactions;
+    const documentText = doc.documentText;
+    
+    let collisions = [];
+    let highRisks = [];
+    let modified = false;
+
+    // Build entity graph: string -> occurrences
+    const entityCounts = {};
+    redactions.forEach(r => {
+        if (r.status === 'redacted') {
+            if (!entityCounts[r.text]) entityCounts[r.text] = { type: r.type, count: 0 };
+            entityCounts[r.text].count++;
+        }
+        // Also collect high risks
+        if (r.status === 'visible' && (r.confidence >= 0.75 || r.isRegexMiss)) {
+            highRisks.push(r);
+        }
+    });
+
+    // Check collisions
+    Object.keys(entityCounts).forEach(text => {
+        let textOccurrences = 0;
+        let i = -1;
+        while ((i = documentText.indexOf(text, i + 1)) >= 0) {
+            textOccurrences++;
+        }
+
+        const redactedCount = entityCounts[text].count;
+        if (textOccurrences > redactedCount) {
+            collisions.push(text);
+            
+            // Auto-inject missing occurrences as collision risks
+            const missingCount = textOccurrences - redactedCount;
+            const existingUnredacted = redactions.filter(r => r.text === text && r.status === 'visible').length;
+            
+            // Only inject if they aren't already listed as visible
+            for (let j = 0; j < missingCount - existingUnredacted; j++) {
+                redactions.push({
+                    id: `collision-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                    text: text,
+                    type: entityCounts[text].type,
+                    confidence: 1.0,
+                    status: "visible",
+                    isRegexMiss: false 
+                });
+                modified = true;
+            }
+        }
+    });
+
+    if (modified) {
+        saveData(data);
+    }
+
+    res.json({
+        valid: collisions.length === 0,
+        collisions,
+        highRisks
+    });
+});
+
 // POST: restore a version to original
 app.post("/api/document/:docId/versions/:versionId/restore", (req, res) => {
     const { docId, versionId } = req.params;

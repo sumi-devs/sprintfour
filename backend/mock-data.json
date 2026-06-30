@@ -157,7 +157,8 @@
             "text": "$4,500,000.00",
             "type": "MONEY",
             "confidence": 0.98,
-            "status": "redacted"
+            "status": "redacted",
+            "source": "manual"
           },
           {
             "id": "r-7",
@@ -207,7 +208,34 @@
             "text": "business transaction",
             "type": "OTHER",
             "confidence": 1,
-            "status": "visible",
+            "status": "redacted",
+            "source": "manual"
+          },
+          {
+            "id": "collision-1782813186862-1942",
+            "text": "Apex Global Solutions Inc.",
+            "type": "PERSON",
+            "confidence": 1,
+            "status": "redacted",
+            "isRegexMiss": false,
+            "source": "manual"
+          },
+          {
+            "id": "collision-1782813186862-7905",
+            "text": "Vertex Technologies LLC",
+            "type": "PERSON",
+            "confidence": 1,
+            "status": "redacted",
+            "isRegexMiss": false,
+            "source": "manual"
+          },
+          {
+            "id": "collision-1782813186862-1437",
+            "text": "Vertex Technologies LLC",
+            "type": "PERSON",
+            "confidence": 1,
+            "status": "redacted",
+            "isRegexMiss": false,
             "source": "manual"
           }
         ]
@@ -298,7 +326,7 @@
             "text": "Nexus Analytics Group",
             "type": "PERSON",
             "confidence": 0.38,
-            "status": "redacted",
+            "status": "visible",
             "source": "manual"
           },
           {
@@ -313,14 +341,16 @@
             "text": "402 West Elm Street, Apartment 4B, Chicago, IL 60610",
             "type": "OTHER",
             "confidence": 0.88,
-            "status": "redacted"
+            "status": "visible",
+            "source": "manual"
           },
           {
             "id": "m1-4",
             "text": "Amanda Wright",
             "type": "PERSON",
             "confidence": 0.98,
-            "status": "redacted"
+            "status": "redacted",
+            "source": "manual"
           },
           {
             "id": "m1-5",
@@ -341,7 +371,7 @@
             "text": "999-01-4432",
             "type": "ID_NUMBER",
             "confidence": 0.96,
-            "status": "visible",
+            "status": "redacted",
             "source": "manual"
           },
           {
@@ -357,6 +387,22 @@
             "type": "PHONE",
             "confidence": 0.98,
             "status": "redacted"
+          },
+          {
+            "id": "manual-1782813868939",
+            "text": "with",
+            "type": "OTHER",
+            "confidence": 1,
+            "status": "visible",
+            "source": "manual"
+          },
+          {
+            "id": "manual-1782813886591",
+            "text": "Executive",
+            "type": "PERSON",
+            "confidence": 1,
+            "status": "redacted",
+            "source": "manual"
           }
         ]
       }
@@ -434,78 +480,6 @@
             "confidence": 1,
             "status": "visible",
             "isRegexMiss": true
-          }
-        ]
-      },
-      {
-        "id": "current",
-        "name": "Current (Edited)",
-        "redactions": [
-          {
-            "id": "m2-1",
-            "text": "Robert H. Kincaid",
-            "type": "PERSON",
-            "confidence": 0.99,
-            "status": "redacted"
-          },
-          {
-            "id": "m2-2",
-            "text": "Horizon Logistics Inc.",
-            "type": "PERSON",
-            "confidence": 0.35,
-            "status": "redacted"
-          },
-          {
-            "id": "m2-3",
-            "text": "CV-2023-8891",
-            "type": "ID_NUMBER",
-            "confidence": 0.85,
-            "status": "redacted"
-          },
-          {
-            "id": "m2-4",
-            "text": "August 14, 2023",
-            "type": "DATE",
-            "confidence": 0.7,
-            "status": "redacted",
-            "source": "manual"
-          },
-          {
-            "id": "m2-5",
-            "text": "$125,500.00",
-            "type": "MONEY",
-            "confidence": 0.99,
-            "status": "redacted"
-          },
-          {
-            "id": "m2-6",
-            "text": "Marcus Vance LLP",
-            "type": "PERSON",
-            "confidence": 0.9,
-            "status": "redacted"
-          },
-          {
-            "id": "m2-7",
-            "text": "$25,000.00",
-            "type": "MONEY",
-            "confidence": 0.96,
-            "status": "redacted"
-          },
-          {
-            "id": "m2-8",
-            "text": "finance@horizonlogistics.com",
-            "type": "EMAIL",
-            "confidence": 0.99,
-            "status": "redacted"
-          },
-          {
-            "id": "regex-miss-current-1782811001379-9523",
-            "text": "(702) 555-3314",
-            "type": "PHONE",
-            "confidence": 1,
-            "status": "redacted",
-            "isRegexMiss": true,
-            "source": "manual"
           }
         ]
       }

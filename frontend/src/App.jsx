@@ -4,7 +4,6 @@ import jsPDF from 'jspdf';
 const API = 'http://localhost:3001';
 const TYPES = ['PERSON', 'PHONE', 'EMAIL', 'DATE', 'MONEY', 'ID_NUMBER', 'OTHER'];
 
-// detect type
 const guessType = (txt) => {
   if (/\(?\d{3}\)?[-\.\s]?\d{3}[-\.\s]?\d{4}/.test(txt)) return 'PHONE';
   if (/[\w.\+-]+@[\w-]+\.[a-zA-Z]{2,}/.test(txt)) return 'EMAIL';
@@ -12,7 +11,6 @@ const guessType = (txt) => {
   return 'OTHER';
 };
 
-// get adj words
 const getAdj = (txt, fullTxt, reds) => {
   const idx = fullTxt.indexOf(txt);
   if (idx < 0) return [];
@@ -30,7 +28,6 @@ const getAdj = (txt, fullTxt, reds) => {
   return res;
 };
 
-// find unredacted
 const getUnredacted = (fullTxt, reds) => {
   const issues = [];
   const ph = /[\(]?\d{3}[\)]?[-\.\s]?\d{3}[-\.\s]?\d{4}/g;
@@ -49,19 +46,18 @@ export default function App() {
   const [doc, setDoc] = useState('');
   const [docTitle, setDocTitle] = useState('');
   const [id, setId] = useState('');
-  
-  // versions state
+
   const [docVersions, setDocVersions] = useState([]);
   const [activeVersionId, setActiveVersionId] = useState('current');
   const [reds, setReds] = useState([]);
   const [origReds, setOrigReds] = useState(null);
-  
+
   const [curDocId, setCurDocId] = useState('api');
   const [openAccordionId, setOpenAccordionId] = useState('api');
 
   const [tab, setTab] = useState('Risks'); // Risks | Redactions | Removals
   const [leftCol, setLeftCol] = useState(false);
-  
+
   const [conf, setConf] = useState(null);
   const [sel, setSel] = useState(null);
   const [selT, setSelT] = useState(TYPES[0]);
@@ -73,6 +69,10 @@ export default function App() {
   const [quiz, setQuiz] = useState(null);
   const [quizAns, setQuizAns] = useState(null);
   const [exportFormat, setExportFormat] = useState('txt');
+
+  const [exportCollisions, setExportCollisions] = useState([]);
+  const [exportHighRisks, setExportHighRisks] = useState([]);
+  const [confirmText, setConfirmText] = useState('');
 
   const [toast, setToast] = useState(null);
 
@@ -103,7 +103,7 @@ export default function App() {
       setDocTitle(d.title || d.documentId);
       setDoc(d.documentText.replace(/—/g, '-'));
       setDocVersions(d.versions || []);
-      
+
       const vArr = d.versions || [];
       let ver = vArr.find(v => v.id === targetVersionId);
       if (!ver && vArr.length > 0) ver = vArr[vArr.length - 1]; // fallback to last
@@ -114,7 +114,7 @@ export default function App() {
 
       const ogVer = vArr.find(v => v.id === 'original');
       setOrigReds(ogVer ? JSON.parse(JSON.stringify(ogVer.redactions)) : null);
-      
+
       setCurDocId(docId);
       setOpenAccordionId(docId);
       setConf(null);
@@ -123,9 +123,9 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { 
+  useEffect(() => {
     loadDocs();
-    loadDoc('api', 'current'); 
+    loadDoc('api', 'current');
   }, [loadDocs, loadDoc]);
 
   const createVersion = async () => {
@@ -164,9 +164,9 @@ export default function App() {
         method: 'DELETE'
       });
       if (activeVersionId === versionId) {
-         await loadDoc(curDocId, 'original');
+        await loadDoc(curDocId, 'original');
       } else {
-         await loadDoc(curDocId, activeVersionId);
+        await loadDoc(curDocId, activeVersionId);
       }
       showToast("Version deleted.");
     } catch (e) {
@@ -174,7 +174,7 @@ export default function App() {
     }
   };
 
-  // toggle red
+  // toggle redaction
   const tog = async (rId, cur) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     const n = cur === 'redacted' ? 'visible' : 'redacted';
@@ -192,7 +192,7 @@ export default function App() {
     setConf(null);
   };
 
-  // new red
+  // new redaction
   const add = async (txt, typ) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     try {
@@ -250,18 +250,18 @@ export default function App() {
     }, 100);
   };
 
-  // confirm rem
+  // confirm remove
   const askRem = (r, rect) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     setConf({ id: r.id, x: rect.left, y: rect.top - 80, item: r });
   };
 
-  // handle rem click from sidebar
+  // handle remove click from sidebar
   const handleRem = (r, el = null) => {
     if (activeVersionId === 'original') return showToast("Original version is read-only.");
     if (r.confidence >= 0.75) {
       let rect = { left: window.innerWidth / 2 - 100, top: window.innerHeight / 2 };
-      if (el) { rect = el.getBoundingClientRect(); } 
+      if (el) { rect = el.getBoundingClientRect(); }
       else {
         const domEl = document.getElementById('span-' + r.id);
         if (domEl) rect = domEl.getBoundingClientRect();
@@ -292,9 +292,9 @@ export default function App() {
   const unredactedIssues = getUnredacted(doc, reds);
   const risksList = [];
   reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
-  
+
   const unredactedFakeReds = unredactedIssues.map((u, i) => ({
-    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true 
+    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true
   }));
   risksList.push(...unredactedFakeReds);
 
@@ -310,7 +310,7 @@ export default function App() {
   if (tab === 'Risks') curList = risksList;
   else if (tab === 'Redactions') curList = redactionsList;
   else if (tab === 'Removals') curList = removalsList;
-  
+
   curList.sort((a, b) => b.confidence - a.confidence);
 
   // build spans
@@ -318,9 +318,18 @@ export default function App() {
     if (!doc) return null;
 
     const allItems = [...reds, ...unredactedFakeReds];
+    const usedIndices = new Set();
+
     const pos = allItems.map((r) => {
-      const i = doc.indexOf(r.text);
-      return i >= 0 ? { ...r, s: i, e: i + r.text.length } : null;
+      let i = doc.indexOf(r.text);
+      while (i >= 0 && usedIndices.has(i)) {
+        i = doc.indexOf(r.text, i + 1);
+      }
+      if (i >= 0) {
+        usedIndices.add(i);
+        return { ...r, s: i, e: i + r.text.length };
+      }
+      return null;
     }).filter(Boolean).sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
 
     const non = [];
@@ -334,7 +343,7 @@ export default function App() {
 
     for (const r of non) {
       if (cur < r.s) seg.push(<span key={`p-${cur}`}>{doc.slice(cur, r.s)}</span>);
-      
+
       let cls = 'span-base ';
       const og = origReds?.find(o => o.id === r.id);
       const isAd = !og;
@@ -352,8 +361,8 @@ export default function App() {
       }
 
       seg.push(
-        <span 
-          key={r.id} 
+        <span
+          key={r.id}
           id={`span-${r.id}`}
           className={cls}
           onClick={(e) => handleSpanClick(e, r)}
@@ -368,23 +377,35 @@ export default function App() {
   };
 
   // do export
-  const doExp = (format) => {
+  const doExp = async (format) => {
     setExportFormat(format);
-    const blk = [];
-    reds.forEach((r) => {
-      if (r.status === 'visible' && r.confidence >= 0.75) {
-        blk.push({ ...r, reason: 'High risk' });
-      }
-    });
-    blk.push(...unredactedIssues);
 
-    if (blk.length > 0) {
-      setExpItems(blk);
-      setExpDec({});
-      setExpState('check');
-    } else {
-      doQuiz();
+    try {
+      const res = await fetch(`${API}/api/document/${curDocId}/versions/${activeVersionId}/validate`);
+      const data = await res.json();
+
+      if (data.collisions && data.collisions.length > 0) {
+        setExportCollisions(data.collisions);
+        setExpState('collision');
+        await loadDoc(curDocId, activeVersionId);
+        return;
+      }
+
+      if (data.highRisks && data.highRisks.length > 0) {
+        setExportHighRisks(data.highRisks);
+        setConfirmText('');
+        setExpState('confirm');
+        return;
+      }
+    } catch (e) {
+      console.error("Validation failed", e);
     }
+
+    proceedExp();
+  };
+
+  const proceedExp = () => {
+    doQuiz();
   };
 
   // proc exp
@@ -413,10 +434,18 @@ export default function App() {
   // fin exp -> actual file download
   const finExp = () => {
     setExpState(null);
-    
+
+    const usedExpIndices = new Set();
     const pos = reds.map((r) => {
-      const i = doc.indexOf(r.text);
-      return i >= 0 ? { ...r, s: i, e: i + r.text.length } : null;
+      let i = doc.indexOf(r.text);
+      while (i >= 0 && usedExpIndices.has(i)) {
+        i = doc.indexOf(r.text, i + 1);
+      }
+      if (i >= 0) {
+        usedExpIndices.add(i);
+        return { ...r, s: i, e: i + r.text.length };
+      }
+      return null;
     }).filter(Boolean).sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
 
     const non = [];
@@ -442,12 +471,12 @@ export default function App() {
       const pdf = new jsPDF('p', 'pt', 'letter');
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(11);
-      
+
       const margin = 50;
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
       const maxW = pageW - margin * 2;
-      
+
       let x = margin;
       let y = margin + 12;
       const lineHeight = 16;
@@ -485,7 +514,7 @@ export default function App() {
         }
 
         const w = pdf.getTextWidth(lt.text);
-        
+
         if (x + w > margin + maxW && lt.text.trim() !== '') {
           x = margin;
           y += lineHeight;
@@ -494,17 +523,17 @@ export default function App() {
             y = margin + 12;
           }
         }
-        
+
         if (lt.redacted) {
           pdf.setFillColor(0, 0, 0);
           pdf.rect(x, y + rectOffsetY, w, rectHeight, 'F');
         } else {
           pdf.text(lt.text, x, y);
         }
-        
+
         x += w;
       }
-      
+
       pdf.save(`Conseal_${curDocId}_Redacted.pdf`);
     } else {
       const blob = new Blob([finalTxt], { type: 'text/plain' });
@@ -548,7 +577,7 @@ export default function App() {
             </button>
           </div>
           <div className="doc-list">
-            
+
             {docList.map(d => {
               const isOpen = openAccordionId === d.id;
               return (
@@ -560,15 +589,15 @@ export default function App() {
                   {isOpen && (
                     <div className="accordion-content">
                       {docVersions.map((v) => (
-                         <div 
-                           key={v.id} 
-                           className={`version-item ${activeVersionId === v.id ? 'active' : ''}`}
-                         >
-                           <span className="version-name" onClick={() => loadDoc(d.id, v.id)}>{v.name}</span>
-                           {v.id !== 'original' && (
-                             <button className="delete-version-btn" onClick={(e) => { e.stopPropagation(); deleteVersion(v.id); }}>✕</button>
-                           )}
-                         </div>
+                        <div
+                          key={v.id}
+                          className={`version-item ${activeVersionId === v.id ? 'active' : ''}`}
+                        >
+                          <span className="version-name" onClick={() => loadDoc(d.id, v.id)}>{v.name}</span>
+                          {v.id !== 'original' && (
+                            <button className="delete-version-btn" onClick={(e) => { e.stopPropagation(); deleteVersion(v.id); }}>✕</button>
+                          )}
+                        </div>
                       ))}
                       <button className="version-create-btn" onClick={createVersion}>+ New Version</button>
                     </div>
@@ -622,11 +651,11 @@ export default function App() {
             {curList.map(r => (
               <div key={r.id} className="redaction-card">
                 <div className="card-header">
-                <span className="card-type">{r.type}</span>
-                <span className={`card-risk ${r.isRegexMiss ? 'risk-regex' : (r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low')}`}>
-                  {r.isRegexMiss ? 'REGEX MISS' : (r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk')}
-                </span>
-              </div>
+                  <span className="card-type">{r.type}</span>
+                  <span className={`card-risk ${r.isRegexMiss ? 'risk-regex' : (r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low')}`}>
+                    {r.isRegexMiss ? 'REGEX MISS' : (r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk')}
+                  </span>
+                </div>
                 <div className="card-text">{r.text}</div>
                 <div className="card-actions">
                   {r.status === 'visible' ? (
@@ -697,8 +726,8 @@ export default function App() {
                 <div key={i} className="modal-item">
                   <div className="modal-item-text">{item.text} <span>({item.type})</span></div>
                   <div className="modal-item-actions">
-                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'redact'})}>✓</button>
-                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'keep'})}>✕</button>
+                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'redact' })}>✓</button>
+                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'keep' })}>✕</button>
                   </div>
                 </div>
               ))}
@@ -716,20 +745,100 @@ export default function App() {
           <div className="modal">
             <h2>Quick Review</h2>
             <p>Is this text sensitive?</p>
-            <div style={{padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px'}}>
+            <div style={{ padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px' }}>
               <strong>{quiz?.text}</strong>
             </div>
-            <div style={{display: 'flex', gap: '20px', marginBottom: '32px'}}>
-              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
                 <input type="radio" checked={quizAns === 'yes'} onChange={() => setQuizAns('yes')} /> Yes
               </label>
-              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
                 <input type="radio" checked={quizAns === 'no'} onChange={() => setQuizAns('no')} /> No
               </label>
             </div>
             <div className="modal-footer">
               <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
               <button className="btn-solid" disabled={!quizAns} onClick={finExp}>Export {exportFormat.toUpperCase()}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expState === 'collision' && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2 style={{ color: '#dc2626' }}>Inconsistency Alert</h2>
+            <p>The following entities have conflicting states. They are redacted in some places but left visible in others. You must resolve these internal collisions before exporting.</p>
+            <div className="modal-list" style={{ marginTop: '16px' }}>
+              {exportCollisions.map((text, i) => (
+                <div key={i} className="modal-item">
+                  <div className="modal-item-text"><strong>{text}</strong></div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '13px', color: '#6d7383', marginTop: '12px' }}>* Unredacted instances have been auto-flagged in your document as visible risks. Please find them and redact them.</p>
+            <div className="modal-footer">
+              <button className="btn-outline" onClick={() => setExpState(null)}>Close & Resolve</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expState === 'confirm' && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2 style={{ color: '#b45309' }}>High-Risk Warning</h2>
+            <p>You are attempting to export a document with high-risk text (e.g. &gt;75% confidence or a Regex fallback miss) left unredacted.</p>
+            <div className="modal-list" style={{ marginTop: '16px', marginBottom: '24px' }}>
+              {exportHighRisks.map((item, i) => (
+                <div key={i} className="modal-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="modal-item-text">{item.text} <span>({item.type})</span></div>
+                  <button
+                    className="btn-solid"
+                    style={{ padding: '6px 12px', fontSize: '12px', marginLeft: '12px' }}
+                    onClick={async () => {
+
+                      if (item.id) {
+                        await tog(item.id, 'visible');
+                      } else {
+                        await add(item.text, item.type);
+                      }
+
+                      const remainingRisks = exportHighRisks.filter((_, index) => index !== i);
+                      setExportHighRisks(remainingRisks);
+
+                      if (remainingRisks.length === 0) {
+                        proceedExp();
+                      }
+                    }}
+                  >
+                    Redact
+                  </button>
+                </div>
+              ))}
+            </div>
+            {exportHighRisks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+                <label style={{ fontSize: '14px', fontWeight: 500 }}>Type "Confirm" to proceed anyway:</label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="Confirm"
+                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }}
+                />
+              </div>
+            )}
+            <div className="modal-footer">
+              <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
+              <button
+                className="btn-solid"
+                disabled={confirmText !== 'Confirm' && exportHighRisks.length > 0}
+                onClick={proceedExp}
+                style={{ background: confirmText === 'Confirm' || exportHighRisks.length === 0 ? '#0a0b0d' : '#9ca3af' }}
+              >
+                Proceed to Export
+              </button>
             </div>
           </div>
         </div>
