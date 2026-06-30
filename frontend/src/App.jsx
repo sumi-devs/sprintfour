@@ -1,262 +1,404 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API = 'http://localhost:3001';
+const TYPES = ['PERSON', 'PHONE', 'EMAIL', 'DATE', 'MONEY', 'ID_NUMBER', 'OTHER'];
 
-const REDACTION_TYPES = ['PERSON', 'PHONE', 'EMAIL', 'DATE', 'MONEY', 'ID_NUMBER', 'OTHER'];
+// detect type
+const guessType = (txt) => {
+  if (/\(?\d{3}\)?[-\.\s]?\d{3}[-\.\s]?\d{4}/.test(txt)) return 'PHONE';
+  if (/[\w.\+-]+@[\w-]+\.[a-zA-Z]{2,}/.test(txt)) return 'EMAIL';
+  if (/^[A-Z][a-z]{2,}(\s[A-Z][a-z]{2,}){0,2}$/.test(txt)) return 'PERSON';
+  return 'OTHER';
+};
+
+// get adj words
+const getAdj = (txt, fullTxt, reds) => {
+  const idx = fullTxt.indexOf(txt);
+  if (idx < 0) return [];
+  const res = [];
+  const b = fullTxt.slice(0, idx).trimEnd().split(/\s+/).pop();
+  if (b) {
+    const cl = b.replace(/[.,;:!?"()]+/g, '');
+    if (cl.length > 1 && /^[A-Z]/.test(cl) && !reds.some((r) => r.text.includes(cl))) res.push(cl);
+  }
+  const a = fullTxt.slice(idx + txt.length).trimStart().split(/\s+/)[0];
+  if (a) {
+    const cl = a.replace(/[.,;:!?"()]+/g, '');
+    if (cl.length > 1 && /^[A-Z]/.test(cl) && !reds.some((r) => r.text.includes(cl))) res.push(cl);
+  }
+  return res;
+};
+
+// find unredacted
+const getUnredacted = (fullTxt, reds) => {
+  const issues = [];
+  const ph = /[\(]?\d{3}[\)]?[-\.\s]?\d{3}[-\.\s]?\d{4}/g;
+  for (const m of fullTxt.matchAll(ph)) {
+    if (!reds.some((r) => r.text === m[0])) issues.push({ text: m[0], type: 'PHONE' });
+  }
+  const em = /[\w.\+-]+@[\w-]+\.[a-zA-Z]{2,}/g;
+  for (const m of fullTxt.matchAll(em)) {
+    if (!reds.some((r) => r.text === m[0])) issues.push({ text: m[0], type: 'EMAIL' });
+  }
+  return issues;
+};
 
 export default function App() {
-  const [documentText, setDocumentText] = useState('');
-  const [documentId, setDocumentId] = useState('');
-  const [redactions, setRedactions] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [doc, setDoc] = useState('');
+  const [id, setId] = useState('');
+  const [reds, setReds] = useState([]);
+  const [origReds, setOrigReds] = useState(null);
 
-  // select popup state
-  const [selection, setSelection] = useState(null); // { text, x, y }
-  const [selectedType, setSelectedType] = useState(REDACTION_TYPES[0]);
+  const [tab, setTab] = useState('All');
+  const [hov, setHov] = useState(null);
+  const [conf, setConf] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [selT, setSelT] = useState(TYPES[0]);
+  const [prox, setProx] = useState([]);
 
-  const viewerRef = useRef(null);
+  const [expState, setExpState] = useState(null);
+  const [expItems, setExpItems] = useState([]);
+  const [expDec, setExpDec] = useState({});
+  const [quiz, setQuiz] = useState(null);
+  const [quizAns, setQuizAns] = useState(null);
 
-  const fetchDocument = useCallback(async () => {
-    try {
-      setError(null);
-      const res = await fetch(`${API}/api/document`);
-      if (!res.ok) throw new Error(`GET /api/document failed: ${res.status}`);
-      const data = await res.json();
-      setDocumentId(data.documentId);
-      setDocumentText(data.documentText);
-      setRedactions(data.redactions);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const vRef = useRef(null);
+  const hovTimer = useRef(null);
+
+  // load doc
+  const load = useCallback(async () => {
+    const r = await fetch(`${API}/api/document`);
+    const d = await r.json();
+    setId(d.documentId);
+    setDoc(d.documentText.replace(/—/g, '-'));
+    setReds(d.redactions);
+    setOrigReds(JSON.parse(JSON.stringify(d.redactions)));
   }, []);
 
-  useEffect(() => {
-    fetchDocument();
-  }, [fetchDocument]);
+  useEffect(() => { load(); }, [load]);
 
-  const toggleRedaction = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'redacted' ? 'visible' : 'redacted';
-    try {
-      const res = await fetch(`${API}/api/document/redactions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
-      const updated = await res.json();
-      setRedactions((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...updated } : r))
-      );
-    } catch (err) {
-      setError(err.message);
+  // toggle red
+  const tog = async (rId, cur) => {
+    const n = cur === 'redacted' ? 'visible' : 'redacted';
+    const r = await fetch(`${API}/api/document/redactions/${rId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: n }),
+    });
+    const u = await r.json();
+    setReds((p) => p.map((x) => (x.id === rId ? { ...x, ...u } : x)));
+    setHov(null);
+    setConf(null);
+  };
+
+  // new red
+  const add = async (txt, typ) => {
+    const r = await fetch(`${API}/api/document/redactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: txt, type: typ }),
+    });
+    const u = await r.json();
+    setReds((p) => [...p, u]);
+    setSel(null);
+    setProx([]);
+  };
+
+  // handle select
+  const handleUp = () => {
+    const s = window.getSelection();
+    const t = s ? s.toString().trim() : '';
+    if (!t) return;
+    if (vRef.current && s.anchorNode && vRef.current.contains(s.anchorNode)) {
+      if (reds.some((r) => r.text === t)) return;
+      const rg = s.getRangeAt(0);
+      const rt = rg.getBoundingClientRect();
+      const gt = guessType(t);
+      setSel({ text: t, x: rt.left, y: rt.bottom + 4 });
+      setSelT(gt);
+      setProx(getAdj(t, doc, reds));
     }
   };
 
-  const addRedaction = async (text, type) => {
-    try {
-      const res = await fetch(`${API}/api/document/redactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, type }),
-      });
-      if (!res.ok) throw new Error(`POST failed: ${res.status}`);
-      const created = await res.json();
-      setRedactions((prev) => [...prev, created]);
-      setSelection(null);
-    } catch (err) {
-      setError(err.message);
+  // clear select
+  const clearSel = () => {
+    setTimeout(() => {
+      const s = window.getSelection();
+      if (!s || !s.toString().trim()) {
+        setSel(null);
+        setProx([]);
+      }
+    }, 100);
+  };
+
+  // hover start
+  const startHov = (e, r) => {
+    if (conf) return;
+    clearTimeout(hovTimer.current);
+    const rt = e.target.getBoundingClientRect();
+    setHov({ id: r.id, x: rt.left, y: rt.top - 40, item: r });
+  };
+
+  // hover end
+  const endHov = () => {
+    hovTimer.current = setTimeout(() => setHov(null), 150);
+  };
+
+  // confirm rem
+  const askRem = (r, rect) => {
+    setConf({ id: r.id, x: rect.left, y: rect.top - 80, item: r });
+    setHov(null);
+  };
+
+  // handle rem click
+  const handleRem = (r, el = null) => {
+    if (r.confidence >= 0.75) {
+      let rect = { left: window.innerWidth / 2 - 100, top: window.innerHeight / 2 };
+      if (el) { rect = el.getBoundingClientRect(); } 
+      else {
+        const domEl = document.getElementById('span-' + r.id);
+        if (domEl) rect = domEl.getBoundingClientRect();
+      }
+      askRem(r, rect);
+    } else {
+      tog(r.id, 'redacted');
     }
   };
 
-  const handleMouseUp = () => {
-    const sel = window.getSelection();
-    const text = sel ? sel.toString().trim() : '';
+  // build spans
+  const buildDoc = () => {
+    if (!doc) return null;
+    const pos = reds.map((r) => {
+      const i = doc.indexOf(r.text);
+      return i >= 0 ? { ...r, s: i, e: i + r.text.length } : null;
+    }).filter(Boolean).sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
 
-    if (!text || text.length === 0) {
-      return;
+    const non = [];
+    let le = 0;
+    for (const r of pos) {
+      if (r.s >= le) { non.push(r); le = r.e; }
     }
 
-    if (
-      viewerRef.current &&
-      sel.anchorNode &&
-      viewerRef.current.contains(sel.anchorNode)
-    ) {
-      // if this text is already a redaction
-      const alreadyRedacted = redactions.some((r) => r.text === text);
-      if (alreadyRedacted) return;
+    const seg = [];
+    let cur = 0;
 
-      // popup near the selection
-      const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      setSelection({
-        text,
-        x: rect.left + window.scrollX,
-        y: rect.bottom + window.scrollY + 4,
-      });
-      setSelectedType(REDACTION_TYPES[0]);
-    }
-  };
+    for (const r of non) {
+      if (cur < r.s) seg.push(<span key={`p-${cur}`}>{doc.slice(cur, r.s)}</span>);
+      
+      let cls = 'span-base ';
+      const og = origReds?.find(o => o.id === r.id);
+      const isAd = !og;
+      const isRm = og && og.status === 'redacted' && r.status === 'visible';
 
-  // clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (selection && !e.target.closest('.selection-popup')) {
-        // small delay - mouseup conflict bug
-        setTimeout(() => {
-          const sel = window.getSelection();
-          if (!sel || sel.toString().trim().length === 0) {
-            setSelection(null);
-          }
-        }, 100);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selection]);
-
-  const buildAnnotatedDocument = () => {
-    if (!documentText) return null;
-
-    // Sort redactions by their position in the text so we can build segments
-    // in order. Only include redactions whose text actually appears in documentText.
-    const positioned = redactions
-      .map((r) => {
-        const idx = documentText.indexOf(r.text);
-        return idx >= 0 ? { ...r, startIdx: idx, endIdx: idx + r.text.length } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.startIdx - b.startIdx);
-
-    // keep first occurrence, skip overlaps
-    const nonOverlapping = [];
-    let lastEnd = 0;
-    for (const r of positioned) {
-      if (r.startIdx >= lastEnd) {
-        nonOverlapping.push(r);
-        lastEnd = r.endIdx;
-      }
-    }
-
-    const segments = [];
-    let cursor = 0;
-
-    for (const r of nonOverlapping) {
-      // text before this redaction
-      if (cursor < r.startIdx) {
-        segments.push(
-          <span key={`plain-${cursor}`}>
-            {documentText.slice(cursor, r.startIdx)}
-          </span>
-        );
+      if (r.status === 'redacted') {
+        if (isAd) cls += 'redact-user';
+        else if (r.confidence >= 0.9) cls += 'redact-high';
+        else if (r.confidence >= 0.75) cls += 'redact-high-med';
+        else if (r.confidence >= 0.5) cls += 'redact-med';
+        else cls += 'redact-low';
+      } else {
+        cls += isRm ? 'span-removed' : 'span-removed';
       }
 
-      // redacted/visible span
-      const isRedacted = r.status === 'redacted';
-      segments.push(
-        <span
-          key={r.id}
-          className={isRedacted ? 'redacted-span' : 'visible-span'}
-          onClick={() => toggleRedaction(r.id, r.status)}
-          title={`Click to ${isRedacted ? 'reveal' : 'redact'}`}
+      seg.push(
+        <span 
+          key={r.id} 
+          id={`span-${r.id}`}
+          className={cls}
+          onMouseEnter={(e) => startHov(e, r)}
+          onMouseLeave={endHov}
         >
           {r.text}
-          <span className="span-tooltip">
-            {r.type} | {r.status} | conf: {r.confidence}
-            {r.source ? ` | ${r.source}` : ''}
-          </span>
         </span>
       );
-
-      cursor = r.endIdx;
+      cur = r.e;
     }
-
-    // plain text
-    if (cursor < documentText.length) {
-      segments.push(
-        <span key={`plain-${cursor}`}>
-          {documentText.slice(cursor)}
-        </span>
-      );
-    }
-
-    return segments;
+    if (cur < doc.length) seg.push(<span key={`p-${cur}`}>{doc.slice(cur)}</span>);
+    return seg;
   };
 
-  if (loading) return <p>Loading document…</p>;
-  if (error) return <p className="error">Error: {error}</p>;
+  // do export
+  const doExp = () => {
+    const blk = [];
+    reds.forEach((r) => {
+      if (r.status === 'visible' && r.confidence >= 0.75) {
+        blk.push({ ...r, reason: 'High risk' });
+      }
+    });
+    blk.push(...getUnredacted(doc, reds));
+
+    if (blk.length > 0) {
+      setExpItems(blk);
+      setExpDec({});
+      setExpState('check');
+    } else {
+      doQuiz();
+    }
+  };
+
+  // proc exp
+  const procCheck = async () => {
+    for (const k of Object.keys(expDec)) {
+      if (expDec[k] === 'redact') {
+        const item = expItems.find(i => i.id === k || i.text === k);
+        if (item) {
+          if (item.id) await tog(item.id, 'visible');
+          else await add(item.text, item.type);
+        }
+      }
+    }
+    doQuiz();
+  };
+
+  // do quiz
+  const doQuiz = () => {
+    setExpState('quiz');
+    const lows = reds.filter(r => r.confidence < 0.5);
+    const item = lows.length > 0 ? lows[0] : { text: 'Daniel Reyes', type: 'PERSON' };
+    setQuiz(item);
+    setQuizAns(null);
+  };
+
+  // fin exp
+  const finExp = () => {
+    setExpState(null);
+    alert('exported');
+  };
+
+  const sorted = [...reds].sort((a, b) => b.confidence - a.confidence);
 
   return (
-    <div>
-      <h1>PII Correction Tool</h1>
-      <p>Document: <strong>{documentId}</strong></p>
-      <p style={{ fontSize: '12px', color: '#666', marginBottom: 8 }}>
-        Click a highlighted span to toggle its status. Select text to add a new redaction.
-      </p>
-
-      <div
-        className="document-viewer"
-        ref={viewerRef}
-        onMouseUp={handleMouseUp}
-      >
-        {buildAnnotatedDocument()}
+    <div className="layout" onClick={clearSel}>
+      <div className="main-area">
+        <div className="header">
+          <div className="logo">Conseal</div>
+          <button className="export-btn" onClick={doExp}>Export</button>
+        </div>
+        <div className="document-container" ref={vRef} onMouseUp={handleUp}>
+          {buildDoc()}
+        </div>
       </div>
 
-      {selection && (
-        <div
-          className="selection-popup"
-          style={{
-            left: selection.x,
-            top: selection.y,
-          }}
-        >
-          <span>Redact "<strong>{selection.text.length > 30 ? selection.text.slice(0, 30) + '…' : selection.text}</strong>"</span>
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-          >
-            {REDACTION_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          <button onClick={() => addRedaction(selection.text, selectedType)}>
-            Confirm
-          </button>
-          <button onClick={() => setSelection(null)}>✕</button>
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-title">Review Redactions</div>
+          <div className="sidebar-tabs">
+            <div className={`tab ${tab === 'All' ? 'active' : ''}`} onClick={() => setTab('All')}>All risks</div>
+            <div className={`tab ${tab === 'High' ? 'active' : ''}`} onClick={() => setTab('High')}>High</div>
+            <div className={`tab ${tab === 'Med' ? 'active' : ''}`} onClick={() => setTab('Med')}>Med</div>
+          </div>
+        </div>
+        <div className="sidebar-content">
+          {sorted.filter(r => {
+            if (tab === 'High') return r.confidence >= 0.75;
+            if (tab === 'Med') return r.confidence >= 0.5 && r.confidence < 0.75;
+            return true;
+          }).map(r => (
+            <div key={r.id} className="redaction-card">
+              <div className="card-header">
+                <span className="card-type">{r.type}</span>
+                <span className={`card-risk ${r.confidence >= 0.75 ? 'risk-high' : r.confidence >= 0.5 ? 'risk-med' : 'risk-low'}`}>
+                  {r.confidence >= 0.75 ? 'High Risk' : r.confidence >= 0.5 ? 'Med Risk' : 'Low Risk'}
+                </span>
+              </div>
+              <div className="card-text">{r.text}</div>
+              <div className="card-actions">
+                {r.status === 'visible' ? (
+                  <button className="card-btn primary" onClick={() => tog(r.id, 'visible')}>Redact</button>
+                ) : (
+                  <button className="card-btn" onClick={() => handleRem(r)}>Remove</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {hov && (
+        <div className="hover-popup" style={{ left: hov.x, top: hov.y }} onMouseEnter={() => clearTimeout(hovTimer.current)} onMouseLeave={endHov}>
+          {hov.item.status === 'visible' ? (
+            <button className="hover-btn" onClick={() => tog(hov.id, 'visible')}>Redact</button>
+          ) : (
+            <button className="hover-btn remove" onClick={(e) => handleRem(hov.item, e.target.parentElement)}>Remove</button>
+          )}
         </div>
       )}
 
-      <h2>Redactions ({redactions.length})</h2>
-      <table className="redactions-table">
-        <thead>
-          <tr>
-            <th>Text</th>
-            <th>Type</th>
-            <th>Confidence</th>
-            <th>Status</th>
-            <th>Source</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {redactions.map((r) => (
-            <tr key={r.id}>
-              <td>{r.text}</td>
-              <td>{r.type}</td>
-              <td>{r.confidence}</td>
-              <td>{r.status}</td>
-              <td>{r.source || '—'}</td>
-              <td>
-                <button onClick={() => toggleRedaction(r.id, r.status)}>
-                  {r.status === 'redacted' ? 'Reveal' : 'Redact'}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {conf && (
+        <div className="removal-confirm" style={{ left: conf.x, top: conf.y }}>
+          <p>Are you sure?</p>
+          <div className="removal-actions">
+            <button className="cancel" onClick={() => setConf(null)}>Cancel</button>
+            <button onClick={() => tog(conf.id, 'redacted')}>Remove</button>
+          </div>
+        </div>
+      )}
+
+      {sel && (
+        <div className="selection-popup" style={{ left: sel.x, top: sel.y }}>
+          <div className="selection-row">
+            <select value={selT} onChange={(e) => { setSelT(e.target.value); setProx(getAdj(sel.text, doc, reds)); }}>
+              {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button onClick={() => add(sel.text, selT)}>Redact</button>
+          </div>
+          {prox.length > 0 && (
+            <div className="proximity-hint">
+              {prox.map(p => (
+                <button key={p} onClick={() => add(p, selT)}>Redact "{p}" too?</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {expState === 'check' && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>High Risk Exposed</h2>
+            <p>Are you sure?</p>
+            <div className="modal-list">
+              {expItems.map((item, i) => (
+                <div key={i} className="modal-item">
+                  <div className="modal-item-text">{item.text} <span style={{color: '#888', fontSize: 12}}>({item.type})</span></div>
+                  <div className="modal-item-actions">
+                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'redact'})}>✓</button>
+                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'keep'})}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
+              <button className="btn-solid" onClick={procCheck}>Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expState === 'quiz' && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Quick Review</h2>
+            <p>Is this text sensitive?</p>
+            <div style={{padding: '12px', background: '#f5f5f5', borderRadius: 4, marginBottom: 16}}>
+              <strong>{quiz?.text}</strong>
+            </div>
+            <div style={{display: 'flex', gap: 12, marginBottom: 24}}>
+              <label style={{display: 'flex', gap: 8, cursor: 'pointer'}}>
+                <input type="radio" checked={quizAns === 'yes'} onChange={() => setQuizAns('yes')} /> Yes
+              </label>
+              <label style={{display: 'flex', gap: 8, cursor: 'pointer'}}>
+                <input type="radio" checked={quizAns === 'no'} onChange={() => setQuizAns('no')} /> No
+              </label>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-outline" onClick={() => setExpState(null)}>Cancel</button>
+              <button className="btn-solid" disabled={!quizAns} onClick={finExp}>Export</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
