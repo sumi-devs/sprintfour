@@ -22,7 +22,7 @@ app.get("/api/documents", (req, res) => {
     const data = loadData();
     res.json(Object.keys(data).map(k => ({
         id: k,
-        title: k === 'api' ? 'Account Access Issue' : k === 'mock-1' ? 'Billing Dispute' : 'Refund Request'
+        title: data[k].title || k
     })));
 });
 
@@ -33,16 +33,27 @@ app.get("/api/document/:docId", (req, res) => {
     res.json(doc);
 });
 
-// GET the default document (for fallback if they don't specify docId)
+// GET the default document
 app.get("/api/document", (req, res) => {
     const data = loadData();
     res.json(data["api"]);
 });
 
+// Helper to get the correct version array
+function getVersionRedactions(doc, versionId) {
+    if (!doc.versions) return doc.redactions; // fallback for older structure if any
+    const v = doc.versions.find(ver => ver.id === versionId) || doc.versions.find(ver => ver.id === 'current');
+    return v ? v.redactions : [];
+}
+
 // PATCH: toggle a single redaction's status
 app.patch("/api/document/:docId/redactions/:id", (req, res) => {
     const { docId, id } = req.params;
-    const { status } = req.body; 
+    const { status, versionId = 'current' } = req.body; 
+
+    if (versionId === 'original') {
+        return res.status(403).json({ error: "Cannot modify original version" });
+    }
 
     if (!["redacted", "visible"].includes(status)) {
         return res.status(400).json({ error: "status must be 'redacted' or 'visible'" });
@@ -50,23 +61,11 @@ app.patch("/api/document/:docId/redactions/:id", (req, res) => {
 
     const data = loadData();
     const doc = data[docId] || data["api"];
-    const span = doc.redactions.find((r) => r.id === id);
+    const redactions = getVersionRedactions(doc, versionId);
+    
+    const span = redactions.find((r) => r.id === id);
     if (!span) return res.status(404).json({ error: "redaction not found" });
 
-    span.status = status;
-    span.source = "manual"; 
-    saveData(data);
-    res.json(span);
-});
-
-// Fallback for old PATCH endpoint
-app.patch("/api/document/redactions/:id", (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body; 
-    const data = loadData();
-    const doc = data["api"];
-    const span = doc.redactions.find((r) => r.id === id);
-    if (!span) return res.status(404).json({ error: "redaction not found" });
     span.status = status;
     span.source = "manual"; 
     saveData(data);
@@ -76,13 +75,20 @@ app.patch("/api/document/redactions/:id", (req, res) => {
 // POST: add a brand new redaction
 app.post("/api/document/:docId/redactions", (req, res) => {
     const { docId } = req.params;
-    const { text, type } = req.body;
+    const { text, type, versionId = 'current' } = req.body;
+    
+    if (versionId === 'original') {
+        return res.status(403).json({ error: "Cannot modify original version" });
+    }
+
     if (!text || !type) {
         return res.status(400).json({ error: "text and type are required" });
     }
 
     const data = loadData();
     const doc = data[docId] || data["api"];
+    const redactions = getVersionRedactions(doc, versionId);
+
     const newSpan = {
         id: `manual-${Date.now()}`,
         text,
@@ -91,31 +97,85 @@ app.post("/api/document/:docId/redactions", (req, res) => {
         status: "redacted",
         source: "manual",
     };
-    doc.redactions.push(newSpan);
+    redactions.push(newSpan);
     saveData(data);
     res.status(201).json(newSpan);
 });
 
-// Fallback for old POST endpoint
-app.post("/api/document/redactions", (req, res) => {
-    const { text, type } = req.body;
+// POST: create a new version
+app.post("/api/document/:docId/versions", (req, res) => {
+    const { docId } = req.params;
+    const { sourceVersionId = 'current' } = req.body;
+    
     const data = loadData();
-    const doc = data["api"];
-    const newSpan = {
-        id: `manual-${Date.now()}`,
-        text,
-        type,
-        confidence: 1.0,
-        status: "redacted",
-        source: "manual",
+    const doc = data[docId] || data["api"];
+    
+    if (!doc.versions) {
+        return res.status(400).json({ error: "Document does not support versions" });
+    }
+
+    const sourceVersion = doc.versions.find(v => v.id === sourceVersionId) || doc.versions.find(v => v.id === 'current');
+    
+    const newVersionId = `v-${Date.now()}`;
+    // Determine a name for the new version
+    const count = doc.versions.filter(v => v.id !== 'original' && v.id !== 'current').length;
+    const newVersionName = `Version ${count + 1}`;
+
+    const newVersion = {
+        id: newVersionId,
+        name: newVersionName,
+        redactions: JSON.parse(JSON.stringify(sourceVersion.redactions)) // Deep copy
     };
-    doc.redactions.push(newSpan);
+
+    doc.versions.push(newVersion);
     saveData(data);
-    res.status(201).json(newSpan);
+    res.status(201).json(newVersion);
 });
 
-app.post("/api/document/reset", (req, res) => {
-    res.json({ message: "Restart the server to reset to original mock data." });
+// POST: restore a version to original
+app.post("/api/document/:docId/versions/:versionId/restore", (req, res) => {
+    const { docId, versionId } = req.params;
+    
+    if (versionId === 'original') {
+        return res.status(400).json({ error: "Cannot restore the original version" });
+    }
+
+    const data = loadData();
+    const doc = data[docId] || data["api"];
+    
+    const targetVersion = doc.versions.find(v => v.id === versionId);
+    const originalVersion = doc.versions.find(v => v.id === 'original');
+
+    if (!targetVersion || !originalVersion) {
+        return res.status(404).json({ error: "Version not found" });
+    }
+
+    targetVersion.redactions = JSON.parse(JSON.stringify(originalVersion.redactions));
+    saveData(data);
+    res.json(targetVersion);
+});
+
+// DELETE: remove a custom version
+app.delete("/api/document/:docId/versions/:versionId", (req, res) => {
+    const { docId, versionId } = req.params;
+    
+    if (versionId === 'original') {
+        return res.status(400).json({ error: "Cannot delete the original version" });
+    }
+
+    const data = loadData();
+    const doc = data[docId] || data["api"];
+    
+    if (!doc.versions) return res.status(404).json({ error: "Versions not found" });
+
+    const idx = doc.versions.findIndex(v => v.id === versionId);
+    if (idx === -1) {
+        return res.status(404).json({ error: "Version not found" });
+    }
+    
+    doc.versions.splice(idx, 1);
+    saveData(data);
+    res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 3001;

@@ -49,16 +49,19 @@ export default function App() {
   const [doc, setDoc] = useState('');
   const [docTitle, setDocTitle] = useState('');
   const [id, setId] = useState('');
+  
+  // versions state
+  const [docVersions, setDocVersions] = useState([]);
+  const [activeVersionId, setActiveVersionId] = useState('current');
   const [reds, setReds] = useState([]);
   const [origReds, setOrigReds] = useState(null);
+  
   const [curDocId, setCurDocId] = useState('api');
-
-  // accordion state
   const [openAccordionId, setOpenAccordionId] = useState('api');
 
   const [tab, setTab] = useState('Risks'); // Risks | Redactions | Removals
   const [leftCol, setLeftCol] = useState(false);
-
+  
   const [conf, setConf] = useState(null);
   const [sel, setSel] = useState(null);
   const [selT, setSelT] = useState(TYPES[0]);
@@ -71,7 +74,14 @@ export default function App() {
   const [quizAns, setQuizAns] = useState(null);
   const [exportFormat, setExportFormat] = useState('txt');
 
+  const [toast, setToast] = useState(null);
+
   const vRef = useRef(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // load doc list
   const loadDocs = useCallback(async () => {
@@ -84,16 +94,27 @@ export default function App() {
     }
   }, []);
 
-  // load specific doc
-  const loadDoc = useCallback(async (docId) => {
+  // load specific doc & version
+  const loadDoc = useCallback(async (docId, targetVersionId = 'current') => {
     try {
       const r = await fetch(`${API}/api/document/${docId}`);
       const d = await r.json();
       setId(d.documentId);
       setDocTitle(d.title || d.documentId);
       setDoc(d.documentText.replace(/—/g, '-'));
-      setReds(d.redactions);
-      setOrigReds(JSON.parse(JSON.stringify(d.redactions)));
+      setDocVersions(d.versions || []);
+      
+      const vArr = d.versions || [];
+      let ver = vArr.find(v => v.id === targetVersionId);
+      if (!ver && vArr.length > 0) ver = vArr[vArr.length - 1]; // fallback to last
+      if (!ver) ver = { id: 'current', redactions: d.redactions || [] }; // extreme fallback
+
+      setActiveVersionId(ver.id);
+      setReds(ver.redactions);
+
+      const ogVer = vArr.find(v => v.id === 'original');
+      setOrigReds(ogVer ? JSON.parse(JSON.stringify(ogVer.redactions)) : null);
+      
       setCurDocId(docId);
       setOpenAccordionId(docId);
       setConf(null);
@@ -102,19 +123,66 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { 
     loadDocs();
-    loadDoc('api');
+    loadDoc('api', 'current'); 
   }, [loadDocs, loadDoc]);
+
+  const createVersion = async () => {
+    try {
+      const r = await fetch(`${API}/api/document/${curDocId}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceVersionId: activeVersionId })
+      });
+      const newV = await r.json();
+      await loadDoc(curDocId, newV.id);
+      showToast("New version created!");
+    } catch (e) {
+      showToast("Failed to create version.");
+    }
+  };
+
+  const restoreVersion = async () => {
+    if (activeVersionId === 'original') return;
+    try {
+      const r = await fetch(`${API}/api/document/${curDocId}/versions/${activeVersionId}/restore`, {
+        method: 'POST'
+      });
+      await r.json();
+      await loadDoc(curDocId, activeVersionId);
+      showToast("Restored to original baseline.");
+    } catch (e) {
+      showToast("Failed to restore.");
+    }
+  };
+
+  const deleteVersion = async (versionId) => {
+    if (versionId === 'original') return;
+    try {
+      await fetch(`${API}/api/document/${curDocId}/versions/${versionId}`, {
+        method: 'DELETE'
+      });
+      if (activeVersionId === versionId) {
+         await loadDoc(curDocId, 'original');
+      } else {
+         await loadDoc(curDocId, activeVersionId);
+      }
+      showToast("Version deleted.");
+    } catch (e) {
+      showToast("Failed to delete version.");
+    }
+  };
 
   // toggle red
   const tog = async (rId, cur) => {
+    if (activeVersionId === 'original') return showToast("Original version is read-only.");
     const n = cur === 'redacted' ? 'visible' : 'redacted';
     try {
       const r = await fetch(`${API}/api/document/${curDocId}/redactions/${rId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: n }),
+        body: JSON.stringify({ status: n, versionId: activeVersionId }),
       });
       const u = await r.json();
       setReds((p) => p.map((x) => (x.id === rId ? { ...x, ...u } : x)));
@@ -126,11 +194,12 @@ export default function App() {
 
   // new red
   const add = async (txt, typ) => {
+    if (activeVersionId === 'original') return showToast("Original version is read-only.");
     try {
       const r = await fetch(`${API}/api/document/${curDocId}/redactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: txt, type: typ }),
+        body: JSON.stringify({ text: txt, type: typ, versionId: activeVersionId }),
       });
       const u = await r.json();
       setReds((p) => [...p, u]);
@@ -158,6 +227,7 @@ export default function App() {
     const t = s ? s.toString().trim() : '';
     if (!t) return;
     if (vRef.current && s.anchorNode && vRef.current.contains(s.anchorNode)) {
+      if (activeVersionId === 'original') return showToast("Original version is read-only.");
       if (reds.some((r) => r.text === t)) return;
       const rg = s.getRangeAt(0);
       const rt = rg.getBoundingClientRect();
@@ -182,14 +252,16 @@ export default function App() {
 
   // confirm rem
   const askRem = (r, rect) => {
+    if (activeVersionId === 'original') return showToast("Original version is read-only.");
     setConf({ id: r.id, x: rect.left, y: rect.top - 80, item: r });
   };
 
   // handle rem click from sidebar
   const handleRem = (r, el = null) => {
+    if (activeVersionId === 'original') return showToast("Original version is read-only.");
     if (r.confidence >= 0.75) {
       let rect = { left: window.innerWidth / 2 - 100, top: window.innerHeight / 2 };
-      if (el) { rect = el.getBoundingClientRect(); }
+      if (el) { rect = el.getBoundingClientRect(); } 
       else {
         const domEl = document.getElementById('span-' + r.id);
         if (domEl) rect = domEl.getBoundingClientRect();
@@ -202,6 +274,7 @@ export default function App() {
 
   // handle span click directly
   const handleSpanClick = (e, r) => {
+    if (activeVersionId === 'original') return showToast("Original version is read-only.");
     if (r.status === 'redacted') {
       const og = origReds?.find(o => o.id === r.id);
       if (r.confidence >= 0.75 && og) {
@@ -219,9 +292,9 @@ export default function App() {
   const unredactedIssues = getUnredacted(doc, reds);
   const risksList = [];
   reds.forEach(r => { if (r.status === 'visible' && r.confidence >= 0.5) risksList.push(r); });
-
+  
   const unredactedFakeReds = unredactedIssues.map((u, i) => ({
-    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true
+    id: `unr-${i}`, text: u.text, type: u.type, confidence: 1, status: 'visible', isNew: true 
   }));
   risksList.push(...unredactedFakeReds);
 
@@ -237,14 +310,13 @@ export default function App() {
   if (tab === 'Risks') curList = risksList;
   else if (tab === 'Redactions') curList = redactionsList;
   else if (tab === 'Removals') curList = removalsList;
-
+  
   curList.sort((a, b) => b.confidence - a.confidence);
 
   // build spans
   const buildDoc = () => {
     if (!doc) return null;
 
-    // merge real redactions and unredacted issues (risks) so they are ALL highlighted in text
     const allItems = [...reds, ...unredactedFakeReds];
     const pos = allItems.map((r) => {
       const i = doc.indexOf(r.text);
@@ -262,7 +334,7 @@ export default function App() {
 
     for (const r of non) {
       if (cur < r.s) seg.push(<span key={`p-${cur}`}>{doc.slice(cur, r.s)}</span>);
-
+      
       let cls = 'span-base ';
       const og = origReds?.find(o => o.id === r.id);
       const isAd = !og;
@@ -279,8 +351,8 @@ export default function App() {
       }
 
       seg.push(
-        <span
-          key={r.id}
+        <span 
+          key={r.id} 
           id={`span-${r.id}`}
           className={cls}
           onClick={(e) => handleSpanClick(e, r)}
@@ -340,8 +412,7 @@ export default function App() {
   // fin exp -> actual file download
   const finExp = () => {
     setExpState(null);
-
-    // sort redactions by position to replace correctly
+    
     const pos = reds.map((r) => {
       const i = doc.indexOf(r.text);
       return i >= 0 ? { ...r, s: i, e: i + r.text.length } : null;
@@ -453,7 +524,7 @@ export default function App() {
     } else {
       setOpenAccordionId(id);
       if (curDocId !== id) {
-        loadDoc(id);
+        loadDoc(id, 'current');
       }
     }
   };
@@ -476,7 +547,7 @@ export default function App() {
             </button>
           </div>
           <div className="doc-list">
-
+            
             {docList.map(d => {
               const isOpen = openAccordionId === d.id;
               return (
@@ -487,8 +558,18 @@ export default function App() {
                   </div>
                   {isOpen && (
                     <div className="accordion-content">
-                      <div className="version-item active">Current (Edited)</div>
-                      <div className="version-item">Original Version</div>
+                      {docVersions.map((v) => (
+                         <div 
+                           key={v.id} 
+                           className={`version-item ${activeVersionId === v.id ? 'active' : ''}`}
+                         >
+                           <span className="version-name" onClick={() => loadDoc(d.id, v.id)}>{v.name}</span>
+                           {v.id !== 'original' && (
+                             <button className="delete-version-btn" onClick={(e) => { e.stopPropagation(); deleteVersion(v.id); }}>✕</button>
+                           )}
+                         </div>
+                      ))}
+                      <button className="version-create-btn" onClick={createVersion}>+ New Version</button>
                     </div>
                   )}
                 </div>
@@ -500,6 +581,11 @@ export default function App() {
 
         <div className="document-pane" ref={vRef} onMouseUp={handleUp}>
           <div className="document-content">
+            {activeVersionId === 'original' && (
+              <div className="readonly-banner">
+                <span className="lock-icon">🔒</span> You are viewing the original read-only baseline.
+              </div>
+            )}
             {buildDoc()}
           </div>
         </div>
@@ -509,6 +595,9 @@ export default function App() {
             <div className="sidebar-top-row">
               <div className="sidebar-title">Review</div>
               <div className="export-actions">
+                {activeVersionId !== 'original' && (
+                  <button className="restore-btn outline" onClick={restoreVersion}>Restore</button>
+                )}
                 <button className="export-btn outline" onClick={() => doExp('txt')}>TXT</button>
                 <button className="export-btn" onClick={() => doExp('pdf')}>PDF</button>
               </div>
@@ -540,9 +629,9 @@ export default function App() {
                 <div className="card-text">{r.text}</div>
                 <div className="card-actions">
                   {r.status === 'visible' ? (
-                    <button className="card-btn primary" onClick={() => r.isNew ? add(r.text, r.type) : tog(r.id, 'visible')}>Redact</button>
+                    <button className="card-btn primary" onClick={() => r.isNew ? add(r.text, r.type) : tog(r.id, 'visible')} disabled={activeVersionId === 'original'}>Redact</button>
                   ) : (
-                    <button className="card-btn" onClick={() => handleRem(r)}>Remove</button>
+                    <button className="card-btn" onClick={() => handleRem(r)} disabled={activeVersionId === 'original'}>Remove</button>
                   )}
                 </div>
               </div>
@@ -560,6 +649,12 @@ export default function App() {
           <div className="legend-item"><div className="legend-box lb-risk"></div> Unredacted Risk (Grey Border)</div>
         </div>
       </div>
+
+      {toast && (
+        <div className="toast-message">
+          {toast}
+        </div>
+      )}
 
       {conf && (
         <div className="removal-confirm" style={{ left: conf.x, top: conf.y }}>
@@ -599,8 +694,8 @@ export default function App() {
                 <div key={i} className="modal-item">
                   <div className="modal-item-text">{item.text} <span>({item.type})</span></div>
                   <div className="modal-item-actions">
-                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'redact' })}>✓</button>
-                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({ ...expDec, [item.id || item.text]: 'keep' })}>✕</button>
+                    <button className={`tick-btn ${expDec[item.id || item.text] === 'redact' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'redact'})}>✓</button>
+                    <button className={`cross-btn ${expDec[item.id || item.text] === 'keep' ? 'active' : ''}`} onClick={() => setExpDec({...expDec, [item.id || item.text]: 'keep'})}>✕</button>
                   </div>
                 </div>
               ))}
@@ -618,14 +713,14 @@ export default function App() {
           <div className="modal">
             <h2>Quick Review</h2>
             <p>Is this text sensitive?</p>
-            <div style={{ padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px' }}>
+            <div style={{padding: '16px', background: '#f4f5f7', borderRadius: '8px', marginBottom: '24px'}}>
               <strong>{quiz?.text}</strong>
             </div>
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
+            <div style={{display: 'flex', gap: '20px', marginBottom: '32px'}}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
                 <input type="radio" checked={quizAns === 'yes'} onChange={() => setQuizAns('yes')} /> Yes
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px' }}>
+              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '15px'}}>
                 <input type="radio" checked={quizAns === 'no'} onChange={() => setQuizAns('no')} /> No
               </label>
             </div>
